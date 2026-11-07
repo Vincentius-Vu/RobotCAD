@@ -23,7 +23,6 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
     isLiveRecording,
     setIsLiveRecording,
     clearAgvHistory,
-    exportBenchmarkCSV,
     physicsFidelity,
   } = useMobileRobotStore();
 
@@ -221,7 +220,22 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
 
   const handleDownloadCSV = () => {
     try {
-      const csv = exportBenchmarkCSV();
+      if (!history || history.length === 0) return;
+      const headers = ['time', 'vx', 'wz', 'vL', 'vR', 'Te_L', 'Te_R', 'Vdc', 'Ibatt', 'slip_L', 'slip_R'];
+      const rows = history.map((pt) => [
+        pt.time.toFixed(4),
+        pt.vx.toFixed(4),
+        pt.wz.toFixed(4),
+        pt.vL.toFixed(4),
+        pt.vR.toFixed(4),
+        pt.Te_L.toFixed(2),
+        pt.Te_R.toFixed(2),
+        pt.Vdc.toFixed(2),
+        pt.Ibatt.toFixed(2),
+        pt.slip_L.toFixed(4),
+        pt.slip_R.toFixed(4),
+      ].join(','));
+      const csv = [headers.join(','), ...rows].join('\n');
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

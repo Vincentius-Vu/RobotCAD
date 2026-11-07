@@ -16,7 +16,7 @@ import { MobileRobotKinematics } from '../kinematics/MobileRobotKinematics';
 import { LidarSensor } from '../navigation/LidarSensor';
 import { PathPlanner } from '../navigation/PathPlanner';
 import { TrajectoryFollower } from '../navigation/TrajectoryFollower';
-import { AGVDigitalTwinEngine, AGVState, AGVLogEntry } from '../physics/mobile/AGVDigitalTwinEngine';
+import { AGVDigitalTwinEngine, AGVState } from '../physics/mobile/AGVDigitalTwinEngine';
 
 export interface AGVHistoryPoint {
   time: number;
@@ -248,11 +248,6 @@ export interface MobileRobotStoreState {
 
   // Actions
   setPhysicsFidelity: (fidelity: 'kinematic' | 'multiphysics') => void;
-  runScientificBenchmark: (tStopSec?: number) => AGVLogEntry[];
-  exportBenchmarkCSV: () => string;
-  runSCurveBenchmark: () => AGVLogEntry[];
-  exportSCurveCSV: () => string;
-  playSCurveManeuver: () => void;
   setIsSimRunning: (running: boolean) => void;
   toggleSimRunning: () => void;
   setIsLiveRecording: (recording: boolean) => void;
@@ -319,70 +314,6 @@ export const useMobileRobotStore = create<MobileRobotStoreState>((set, get) => (
   toggleSimRunning: () => set((state) => ({ isSimRunning: !state.isSimRunning })),
   setIsLiveRecording: (recording: boolean) => set({ isLiveRecording: recording }),
   clearAgvHistory: () => set({ agvHistory: [] }),
-
-  runScientificBenchmark: (tStopSec = 1.0): AGVLogEntry[] => {
-    const freshEngine = new AGVDigitalTwinEngine();
-    return freshEngine.simulateScientificBenchmark(tStopSec, 1.0e-6);
-  },
-
-  exportBenchmarkCSV: (): string => {
-    const log = get().runScientificBenchmark(1.0);
-    return AGVDigitalTwinEngine.exportToCSV(log);
-  },
-
-  runSCurveBenchmark: (): AGVLogEntry[] => {
-    const freshEngine = new AGVDigitalTwinEngine();
-    return freshEngine.simulateSCurveBenchmark(5.5, 1.0e-6);
-  },
-
-  exportSCurveCSV: (): string => {
-    const log = get().runSCurveBenchmark();
-    return AGVDigitalTwinEngine.exportToCSV(log);
-  },
-
-  playSCurveManeuver: () => {
-    set({ isNavigating: false, isMissionRunning: false, isSimRunning: false });
-    const log = get().runSCurveBenchmark();
-    if (!log || log.length === 0) return;
-
-    set({
-      pose: { x: log[0].X, y: log[0].Y, thetaRad: log[0].psi, z: 0.08 },
-      tracePoints: [{ x: log[0].X, y: log[0].Y }],
-      velocity: { v: 0, vY: 0, omega: 0, steerAngleRad: 0 },
-    });
-
-    let idx = 0;
-    const intervalMs = 25; // 40 FPS playback
-    const stepRatio = Math.max(1, Math.round((intervalMs / 1000) / 1.0e-3));
-    const timer = setInterval(() => {
-      idx += stepRatio;
-      if (idx >= log.length) {
-        clearInterval(timer);
-        set({ isSimRunning: true });
-        return;
-      }
-      const entry = log[idx];
-      const newPose = { x: entry.X, y: entry.Y, thetaRad: entry.psi, z: 0.08 };
-      const currentTrace = get().tracePoints;
-      const lastPt = currentTrace[currentTrace.length - 1];
-      const newTrace = (!lastPt || Math.hypot(newPose.x - lastPt.x, newPose.y - lastPt.y) >= 0.04)
-        ? [...currentTrace, { x: newPose.x, y: newPose.y }]
-        : currentTrace;
-
-      set((state) => ({
-        pose: newPose,
-        velocity: { v: entry.vx, vY: entry.vy, omega: entry.wz, steerAngleRad: 0 },
-        wheelState: {
-          speedsRadps: [entry.omega_wL, entry.omega_wR],
-          anglesRad: [
-            (state.wheelState.anglesRad[0] + entry.omega_wL * (intervalMs / 1000)) % (2 * Math.PI),
-            (state.wheelState.anglesRad[1] + entry.omega_wR * (intervalMs / 1000)) % (2 * Math.PI),
-          ],
-        },
-        tracePoints: newTrace,
-      }));
-    }, intervalMs);
-  },
 
   setDriveType: (type: MobileDriveType) => {
     const specs = type === 'mecanum' ? DEFAULT_MECANUM_SPECS : DEFAULT_DIFF_DRIVE_SPECS;

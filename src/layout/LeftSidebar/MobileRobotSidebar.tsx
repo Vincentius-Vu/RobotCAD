@@ -15,7 +15,6 @@ import {
   Compass,
   Activity,
   Layers,
-  Download,
   Move,
 } from 'lucide-react';
 
@@ -31,9 +30,6 @@ export const MobileRobotSidebar: React.FC = () => {
     physicsFidelity,
     agvState,
     setPhysicsFidelity,
-    exportBenchmarkCSV,
-    exportSCurveCSV,
-    playSCurveManeuver,
     setTargetVelocity,
     setNavGoal,
     planPathToGoal,
@@ -55,51 +51,6 @@ export const MobileRobotSidebar: React.FC = () => {
   } = useMobileRobotStore();
 
   const [activeKey, setActiveKey] = useState<string | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
-
-  const handleExportBenchmark = () => {
-    setIsExporting(true);
-    setTimeout(() => {
-      try {
-        const csvContent = exportBenchmarkCSV();
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', `agv_digital_twin_benchmark_${Date.now()}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        console.error('Export benchmark failed:', err);
-      } finally {
-        setIsExporting(false);
-      }
-    }, 50);
-  };
-
-  const handleExportSCurve = () => {
-    setIsExporting(true);
-    setTimeout(() => {
-      try {
-        const csvContent = exportSCurveCSV();
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', `agv_scurve_benchmark_${Date.now()}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        console.error('Export S-Curve benchmark failed:', err);
-      } finally {
-        setIsExporting(false);
-      }
-    }, 50);
-  };
 
   // Keyboard WASD listener
   useEffect(() => {
@@ -226,38 +177,6 @@ export const MobileRobotSidebar: React.FC = () => {
             </div>
           </div>
         )}
-
-        {/* Benchmark CSV Export & S-Curve Controls */}
-        <div className="space-y-1.5 pt-1">
-          <div className="grid grid-cols-2 gap-1.5">
-            <button
-              onClick={handleExportBenchmark}
-              disabled={isExporting}
-              className="py-1.5 px-2 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 active:bg-indigo-600 border border-indigo-500/40 text-indigo-200 font-medium flex items-center justify-center space-x-1.5 transition text-[10px]"
-              title="Chạy mô phỏng 1.0s (1.000.000 bước explicit dt=1µs) và xuất CSV đối chuẩn với C++, Python, MATLAB"
-            >
-              <Download className="w-3 h-3 text-indigo-400" />
-              <span>{isExporting ? 'Đang giải...' : 'CSV Thẳng (1.0s)'}</span>
-            </button>
-            <button
-              onClick={handleExportSCurve}
-              disabled={isExporting}
-              className="py-1.5 px-2 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 active:bg-purple-600 border border-purple-500/40 text-purple-200 font-medium flex items-center justify-center space-x-1.5 transition text-[10px]"
-              title="Chạy mô phỏng 5.5s quỹ đạo cua chữ S (5.500.000 bước explicit dt=1µs) đối chuẩn Quad-Platform"
-            >
-              <Download className="w-3 h-3 text-purple-400" />
-              <span>{isExporting ? 'Đang giải...' : 'CSV Chữ S (5.5s)'}</span>
-            </button>
-          </div>
-          <button
-            onClick={playSCurveManeuver}
-            className="w-full py-1.5 px-3 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 active:bg-emerald-600 border border-emerald-500/40 text-emerald-200 font-medium flex items-center justify-center space-x-2 transition text-[11px]"
-            title="Phát chuyển động động lực học cua chữ S (5.5s, 5 pha: Tăng tốc -> Rẽ trái gắt -> Rẽ phải -> Phanh tái sinh -> Dừng đỗ) trực tiếp trên 3D Viewport"
-          >
-            <Play className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Phát Mô Phỏng Quỹ Đạo Chữ S (3D S-Curve)</span>
-          </button>
-        </div>
       </div>
 
       {/* 1. Virtual Joystick & Teleoperation */}
