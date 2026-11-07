@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: "If you use this software, algorithms, or models in your research or educational curriculum, please cite it using the metadata below."
+title: "RobotCAD: 3D Industrial Robotics Kinematics, Dynamics & Multiphysics Studio"
+version: 1.0.0
+date-released: 2026-11-07
+authors:
+  - family-names: "Vu"
+    given-names: "Tri-Vien"
+    email: "vutrivien@tdtu.edu.vn"
+    affiliation: "Ton Duc Thang University (TDTU), Ho Chi Minh City, Vietnam"
+repository-code: "https://github.com/Vincentius-Vu/RobotCAD"
+url: "https://vincentius-vu.github.io/RobotCAD/"
+license: GPL-3.0-or-later
+keywords:
+  - "robotics"
+  - "forward-kinematics"
+  - "inverse-kinematics"
+  - "denavit-hartenberg"
+  - "multiphysics"
+  - "digital-twin"
+  - "pmsm"
+  - "field-oriented-control"
+  - "agv"
+  - "threejs"
+  - "webgl"
+preferred-citation:
+  type: article
+  authors:
+    - family-names: "Vu"
+      given-names: "Tri-Vien"
+      affiliation: "Ton Duc Thang University (TDTU)"
+  title: "Deterministic Machine-Precision Cross-Validation and Real-Time Edge Simulation of an All-Analytical Digital Twin for Dual-PMSM Wheeled Mobile Robots: A Tri-Platform Comparative Study across C++, Python, and MATLAB"
+  journal: "Acta Mechanica et Automatica"
+  year: 2026
+  url: "https://github.com/Vincentius-Vu/RobotCAD"
