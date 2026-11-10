@@ -1,10 +1,12 @@
 import React from 'react';
 import { useRobotStore } from '../../store/robotStore';
+import { useTranslation } from '../../i18n';
 import { CameraPreset } from '../../types/robot';
 import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 
 export const CameraPresetsHUD: React.FC = () => {
   const { cameraPreset, setCameraPreset } = useRobotStore();
+  const { t } = useTranslation();
 
   const presets: { id: CameraPreset; label: string }[] = [
     { id: 'isometric', label: 'Iso' },
@@ -49,21 +51,21 @@ export const CameraPresetsHUD: React.FC = () => {
       <button
         onClick={handleZoomIn}
         className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-        title="Phóng to (Zoom In)"
+        title={t.modals.zoomIn}
       >
         <ZoomIn className="w-3.5 h-3.5" />
       </button>
       <button
         onClick={handleZoomOut}
         className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-        title="Thu nhỏ (Zoom Out)"
+        title={t.modals.zoomOut}
       >
         <ZoomOut className="w-3.5 h-3.5" />
       </button>
       <button
         onClick={handleFit}
         className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-        title="Vừa khung hình (Fit to Scene)"
+        title={t.modals.fitToScene}
       >
         <Maximize2 className="w-3.5 h-3.5 text-sky-400" />
       </button>

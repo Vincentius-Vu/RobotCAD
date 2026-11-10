@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useRobotStore } from '../../store/robotStore';
+import { useTranslation } from '../../i18n';
 import {
   ControllerStrategyRegistry,
   CONTROLLER_TEMPLATES,
@@ -30,6 +31,8 @@ export const CustomControllerModal: React.FC<CustomControllerModalProps> = ({
   onRegistered,
   initialDefinition,
 }) => {
+  const { language } = useTranslation();
+  const isVi = language === 'vi';
   const { robotModel, inertialParameters, dynamicsSettings } = useRobotStore();
 
   const [id, setId] = useState(initialDefinition?.id || '');
@@ -67,7 +70,7 @@ export const CustomControllerModal: React.FC<CustomControllerModalProps> = ({
 
   const handleDryRun = () => {
     if (!robotModel) {
-      setTestResult({ success: false, message: 'Chưa có mô hình robot đang nạp để chạy thử.' });
+      setTestResult({ success: false, message: isVi ? 'Chưa có mô hình robot đang nạp để chạy thử.' : 'No robot model is currently loaded for dry-run.' });
       return;
     }
 
@@ -94,7 +97,7 @@ export const CustomControllerModal: React.FC<CustomControllerModalProps> = ({
       if (!out || !Array.isArray(out.tau) || out.tau.length !== dof) {
         setTestResult({
           success: false,
-          message: `Kích thước mảng tau trả về (${out?.tau?.length || 0}) không khớp với số khớp của robot (${dof} DOF).`,
+          message: isVi ? `Kích thước mảng tau trả về (${out?.tau?.length || 0}) không khớp với số khớp của robot (${dof} DOF).` : `Returned torque array length (${out?.tau?.length || 0}) does not match robot DOF (${dof}).`,
         });
         return;
       }
@@ -103,27 +106,27 @@ export const CustomControllerModal: React.FC<CustomControllerModalProps> = ({
       if (hasNaN) {
         setTestResult({
           success: false,
-          message: 'Mảng tau trả về chứa giá trị không hợp lệ (NaN hoặc Infinity). Hãy kiểm tra phép chia cho 0.',
+          message: isVi ? 'Mảng tau trả về chứa giá trị không hợp lệ (NaN hoặc Infinity). Hãy kiểm tra phép chia cho 0.' : 'Returned torque array contains invalid values (NaN or Infinity). Check for division by zero.',
         });
         return;
       }
 
       setTestResult({
         success: true,
-        message: `Cú pháp hợp lệ! Tính toán thành công cho ${dof} khớp.`,
+        message: isVi ? `Cú pháp hợp lệ! Tính toán thành công cho ${dof} khớp.` : `Syntax valid! Successfully computed torques for ${dof} joints.`,
         torques: out.tau,
       });
     } catch (err: any) {
       setTestResult({
         success: false,
-        message: err.message || 'Lỗi cú pháp hoặc runtime error trong code.',
+        message: err.message || (isVi ? 'Lỗi cú pháp hoặc runtime error trong code.' : 'Syntax error or runtime error in code execution.'),
       });
     }
   };
 
   const handleSaveAndRegister = () => {
     if (!name.trim()) {
-      alert('Vui lòng nhập tên cho bộ điều khiển.');
+      alert(isVi ? 'Vui lòng nhập tên cho bộ điều khiển.' : 'Please enter a name for the custom controller.');
       return;
     }
 
@@ -134,7 +137,7 @@ export const CustomControllerModal: React.FC<CustomControllerModalProps> = ({
         id: cleanId,
         name: name.trim(),
         category,
-        description: description.trim() || 'Thuật toán điều khiển tùy biến người dùng',
+        description: description.trim() || (isVi ? 'Thuật toán điều khiển tùy biến người dùng' : 'Custom user-defined control algorithm'),
         scriptCode,
         createdAt: new Date().toISOString(),
       };
@@ -145,14 +148,14 @@ export const CustomControllerModal: React.FC<CustomControllerModalProps> = ({
     } catch (err: any) {
       setTestResult({
         success: false,
-        message: `Không thể đăng ký: ${err.message}`,
+        message: isVi ? `Không thể đăng ký: ${err.message}` : `Registration failed: ${err.message}`,
       });
     }
   };
 
   const handleDelete = () => {
     if (!initialDefinition?.id) return;
-    if (confirm(`Bạn có chắc muốn xóa bộ điều khiển "${initialDefinition.name}" không?`)) {
+    if (confirm(isVi ? `Bạn có chắc muốn xóa bộ điều khiển "${initialDefinition.name}" không?` : `Are you sure you want to delete controller "${initialDefinition.name}"?`)) {
       ControllerStrategyRegistry.deleteCustomController(initialDefinition.id);
       onRegistered('computed-torque');
       onClose();
@@ -170,13 +173,13 @@ export const CustomControllerModal: React.FC<CustomControllerModalProps> = ({
             </div>
             <div>
               <h2 className="text-sm font-mono font-bold text-white flex items-center space-x-2">
-                <span>Trình Tạo Thuật Toán Điều Khiển (Controller Sandbox)</span>
+                <span>{isVi ? 'Trình Tạo Thuật Toán Điều Khiển (Controller Sandbox)' : 'Custom Controller Sandbox IDE'}</span>
                 <span className="text-[10px] bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded-full border border-sky-500/40">
                   Open-Architecture
                 </span>
               </h2>
               <p className="text-[11px] text-slate-400 font-mono">
-                Lập trình và nhúng trực tiếp thuật toán điều khiển tùy biến (MPC, ADRC, SMC, NPID...) vào mô phỏng 500 Hz
+                {isVi ? 'Lập trình và nhúng trực tiếp thuật toán điều khiển tùy biến (MPC, ADRC, SMC, NPID...) vào mô phỏng 500 Hz' : 'Program and hot-reload custom control algorithms (MPC, ADRC, SMC, NPID...) at 500 Hz'}
               </p>
             </div>
           </div>
@@ -194,7 +197,7 @@ export const CustomControllerModal: React.FC<CustomControllerModalProps> = ({
           <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center space-x-2">
               <Sparkles className="w-4 h-4 text-amber-400" />
-              <span className="text-xs font-mono font-bold text-slate-300">Chọn mẫu thuật toán (Templates):</span>
+              <span className="text-xs font-mono font-bold text-slate-300">{isVi ? 'Chọn mẫu thuật toán (Templates):' : 'Select Algorithm Template:'}</span>
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               {CONTROLLER_TEMPLATES.map((tmpl) => (
@@ -212,7 +215,7 @@ export const CustomControllerModal: React.FC<CustomControllerModalProps> = ({
           {/* Form Fields: Name, Category, ID, Description */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="space-y-1">
-              <label className="text-[11px] font-mono text-slate-400 block font-semibold">Tên bộ điều khiển:</label>
+              <label className="text-[11px] font-mono text-slate-400 block font-semibold">{isVi ? 'Tên bộ điều khiển:' : 'Controller Name:'}</label>
               <input
                 type="text"
                 value={name}
@@ -233,7 +236,7 @@ export const CustomControllerModal: React.FC<CustomControllerModalProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-[11px] font-mono text-slate-400 block font-semibold">Mã định danh (ID):</label>
+              <label className="text-[11px] font-mono text-slate-400 block font-semibold">{isVi ? 'Mã định danh (ID):' : 'Controller ID:'}</label>
               <input
                 type="text"
                 value={id}
@@ -244,28 +247,28 @@ export const CustomControllerModal: React.FC<CustomControllerModalProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-[11px] font-mono text-slate-400 block font-semibold">Phân loại (Category):</label>
+              <label className="text-[11px] font-mono text-slate-400 block font-semibold">{isVi ? 'Phân loại (Category):' : 'Category:'}</label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as any)}
                 className="w-full bg-slate-950 border border-slate-800 focus:border-sky-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 font-mono outline-none"
               >
-                <option value="classical">Kinh điển (Classical)</option>
-                <option value="robust">Bền vững & Phi tuyến (Robust)</option>
-                <option value="optimal">Tối ưu & Thích nghi (Optimal/Adaptive)</option>
-                <option value="impedance">Điều khiển mềm dẻo (Impedance)</option>
-                <option value="custom">Tùy biến người dùng (Custom)</option>
+                <option value="classical">{isVi ? 'Kinh điển (Classical)' : 'Classical (PID / Computed Torque)'}</option>
+                <option value="robust">{isVi ? 'Bền vững & Phi tuyến (Robust)' : 'Robust & Nonlinear (SMC / ISMC)'}</option>
+                <option value="optimal">{isVi ? 'Tối ưu & Thích nghi (Optimal/Adaptive)' : 'Optimal & Adaptive (LQR / MRAC)'}</option>
+                <option value="impedance">{isVi ? 'Điều khiển mềm dẻo (Impedance)' : 'Impedance & Force Control'}</option>
+                <option value="custom">{isVi ? 'Tùy biến người dùng (Custom)' : 'Custom User Defined'}</option>
               </select>
             </div>
           </div>
 
           <div className="space-y-1">
-            <label className="text-[11px] font-mono text-slate-400 block font-semibold">Mô tả / Công thức toán:</label>
+            <label className="text-[11px] font-mono text-slate-400 block font-semibold">{isVi ? 'Mô tả / Công thức toán:' : 'Mathematical Formulation & Description:'}</label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="VD: τ = M(q)(qdd_d + Kp*e + Kd*edot) + g(q) với bù ma sát phi tuyến"
+              placeholder={isVi ? "VD: τ = M(q)(qdd_d + Kp*e + Kd*edot) + g(q) với bù ma sát phi tuyến" : "e.g. τ = M(q)(qdd_d + Kp*e + Kd*edot) + g(q) with nonlinear friction compensation"}
               className="w-full bg-slate-950 border border-slate-800 focus:border-sky-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 font-mono outline-none"
             />
           </div>
@@ -275,7 +278,7 @@ export const CustomControllerModal: React.FC<CustomControllerModalProps> = ({
             <div className="flex items-center justify-between">
               <label className="text-[11px] font-mono text-slate-300 flex items-center space-x-1.5 font-bold">
                 <FileCode className="w-3.5 h-3.5 text-purple-400" />
-                <span>Mã nguồn thuật toán JavaScript (compute function body):</span>
+                <span>{isVi ? 'Mã nguồn thuật toán JavaScript (compute function body):' : 'JavaScript Algorithm Implementation (compute function body):'}</span>
               </label>
 
               <button
@@ -284,42 +287,42 @@ export const CustomControllerModal: React.FC<CustomControllerModalProps> = ({
                 className="text-[10px] font-mono text-sky-400 hover:text-sky-300 flex items-center space-x-1"
               >
                 <BookOpen className="w-3 h-3" />
-                <span>{showCheatsheet ? 'Ẩn hướng dẫn API' : 'Xem danh mục biến ctx & hàm RNE/Kinematics'}</span>
+                <span>{showCheatsheet ? (isVi ? 'Ẩn hướng dẫn API' : 'Hide API Reference') : (isVi ? 'Xem danh mục biến ctx & hàm RNE/Kinematics' : 'Show ctx Reference & RNE/Kinematics API')}</span>
               </button>
             </div>
 
             {/* Cheatsheet Accordion */}
             {showCheatsheet && (
               <div className="p-3 bg-slate-950/90 border border-sky-500/30 rounded-xl space-y-2 text-[10px] font-mono text-slate-300 animate-in fade-in duration-100">
-                <div className="font-bold text-sky-300">Các biến và hàm có sẵn trong hàm điều khiển:</div>
+                <div className="font-bold text-sky-300">{isVi ? 'Các biến và hàm có sẵn trong hàm điều khiển:' : 'Available Execution Context (ctx) & Methods:'}</div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-slate-400">
                   <div>
-                    <span className="text-white font-semibold">ctx.qRad / ctx.qdRad:</span> Góc quay & vận tốc hiện tại (rad, rad/s)
+                    <span className="text-white font-semibold">ctx.qRad / ctx.qdRad:</span> {isVi ? 'Góc quay & vận tốc hiện tại (rad, rad/s)' : 'Current joint positions & velocities (rad, rad/s)'}
                   </div>
                   <div>
-                    <span className="text-white font-semibold">ctx.qDesiredRad / qdDesiredRad / qddDesiredRad:</span> Quỹ đạo tham chiếu
+                    <span className="text-white font-semibold">ctx.qDesiredRad / qdDesiredRad / qddDesiredRad:</span> {isVi ? 'Quỹ đạo tham chiếu' : 'Desired trajectory references (pos, vel, accel)'}
                   </div>
                   <div>
-                    <span className="text-white font-semibold">ctx.dhParams:</span> Danh sách thông số D-H của robot
+                    <span className="text-white font-semibold">ctx.dhParams:</span> {isVi ? 'Danh sách thông số D-H của robot' : 'Array of Denavit-Hartenberg kinematic parameters'}
                   </div>
                   <div>
-                    <span className="text-white font-semibold">ctx.inertiaList:</span> Danh sách khối lượng, quán tính và maxTorque
+                    <span className="text-white font-semibold">ctx.inertiaList:</span> {isVi ? 'Danh sách khối lượng, quán tính và maxTorque' : 'Link masses, center-of-mass, inertia tensors & max torque'}
                   </div>
                   <div>
-                    <span className="text-white font-semibold">RNE.computeMassMatrix(dh, inertia, q):</span> Tính ma trận quán tính M(q)
+                    <span className="text-white font-semibold">RNE.computeMassMatrix(dh, inertia, q):</span> {isVi ? 'Tính ma trận quán tính M(q)' : 'Computes symmetric positive-definite inertia matrix M(q)'}
                   </div>
                   <div>
-                    <span className="text-white font-semibold">RNE.computeInverseDynamics(dh, inertia, q, qd, qdd, g):</span> Tính τ ngược RNE
+                    <span className="text-white font-semibold">RNE.computeInverseDynamics(dh, inertia, q, qd, qdd, g):</span> {isVi ? 'Tính τ ngược RNE' : 'Computes inverse dynamics torques via recursive Newton-Euler'}
                   </div>
                   <div>
-                    <span className="text-white font-semibold">Kinematics.computeForwardKinematics(dh, qDeg):</span> Ma trận thế T
+                    <span className="text-white font-semibold">Kinematics.computeForwardKinematics(dh, qDeg):</span> {isVi ? 'Ma trận thế T' : 'Homogeneous transformation matrix T'}
                   </div>
                   <div>
-                    <span className="text-white font-semibold">Kinematics.computeGeometricJacobian(dh, qDeg):</span> Ma trận Jacobian J
+                    <span className="text-white font-semibold">Kinematics.computeGeometricJacobian(dh, qDeg):</span> {isVi ? 'Ma trận Jacobian J' : 'Geometric Jacobian matrix J (6xN)'}
                   </div>
                 </div>
                 <div className="text-slate-400 border-t border-slate-800 pt-1">
-                  Giá trị trả về bắt buộc: <code className="text-emerald-400 font-bold">return &#123; tau: number[] &#125;;</code>
+                  {isVi ? 'Giá trị trả về bắt buộc:' : 'Mandatory return signature:'} <code className="text-emerald-400 font-bold">return &#123; tau: number[] &#125;;</code>
                 </div>
               </div>
             )}
@@ -354,7 +357,7 @@ export const CustomControllerModal: React.FC<CustomControllerModalProps> = ({
               </div>
               {testResult.torques && (
                 <div className="text-[10px] font-mono text-slate-400">
-                  Momen thử nghiệm [J1..Jn]:{' '}
+                  {isVi ? 'Momen thử nghiệm [J1..Jn]:' : 'Dry-Run Evaluated Torques [J1..Jn]:'}{' '}
                   <span className="text-white font-semibold">
                     [{testResult.torques.map((t) => t.toFixed(2)).join(' Nm, ')} Nm]
                   </span>
@@ -373,7 +376,7 @@ export const CustomControllerModal: React.FC<CustomControllerModalProps> = ({
                 className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-600/40 text-xs font-mono transition"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>Xóa bộ này</span>
+                <span>{isVi ? 'Xóa bộ này' : 'Delete Controller'}</span>
               </button>
             )}
           </div>
@@ -382,10 +385,10 @@ export const CustomControllerModal: React.FC<CustomControllerModalProps> = ({
             <button
               onClick={handleDryRun}
               className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 transition"
-              title="Chạy thử nghiệm thuật toán với tư thế robot hiện tại"
+              title={isVi ? "Chạy thử nghiệm thuật toán với tư thế robot hiện tại" : "Dry-run evaluate controller script with current robot pose"}
             >
               <Play className="w-3.5 h-3.5 text-sky-400 fill-current" />
-              <span>Chạy Thử (Dry-Run)</span>
+              <span>{isVi ? 'Chạy Thử (Dry-Run)' : 'Dry-Run Evaluate'}</span>
             </button>
 
             <button
@@ -393,7 +396,7 @@ export const CustomControllerModal: React.FC<CustomControllerModalProps> = ({
               className="flex items-center space-x-1.5 px-4 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-sky-600 hover:from-purple-500 hover:to-sky-500 text-white font-bold shadow-lg transition"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Lưu & Đăng Ký Thuật Toán</span>
+              <span>{isVi ? 'Lưu & Đăng Ký Thuật Toán' : 'Register & Hot-Reload'}</span>
             </button>
           </div>
         </div>

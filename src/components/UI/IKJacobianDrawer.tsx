@@ -1,5 +1,6 @@
 import React from 'react';
 import { useRobotStore } from '../../store/robotStore';
+import { useTranslation } from '../../i18n';
 import {
   Activity,
   X,
@@ -23,6 +24,8 @@ export const IKJacobianDrawer: React.FC<IKJacobianDrawerProps> = ({
   onClose,
   onSetGizmoMode,
 }) => {
+  const { language } = useTranslation();
+  const isVi = language === 'vi';
   const {
     robotModel,
     jacobianMatrix,
@@ -92,13 +95,13 @@ export const IKJacobianDrawer: React.FC<IKJacobianDrawerProps> = ({
           </div>
 
           <p className="text-[11px] text-slate-400 leading-relaxed">
-            Kéo các mũi tên hoặc vòng xoay trực tiếp trên đầu gắp (TCP) trong không gian 3D.
-            Bộ giải IK sẽ tự động tính toán các góc khớp thời gian thực ở 60 FPS.
+            {isVi ? 'Kéo các mũi tên hoặc vòng xoay trực tiếp trên đầu gắp (TCP) trong không gian 3D.' : 'Drag gizmo handles directly on the Tool Center Point (TCP) in 3D.'}
+            {isVi ? 'Bộ giải IK sẽ tự động tính toán các góc khớp thời gian thực ở 60 FPS.' : 'The IK solver computes joint configurations in real time at 60 FPS.'}
           </p>
 
           {overlays.showIKGizmo && (
             <div className="flex items-center space-x-2 pt-1">
-              <span className="text-xs font-mono text-slate-400">Chế độ Gizmo:</span>
+              <span className="text-xs font-mono text-slate-400">{isVi ? "Chế độ Gizmo:" : "Gizmo Mode:"}</span>
               <button
                 onClick={() => handleModeChange('translate')}
                 className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-mono transition ${
@@ -108,7 +111,7 @@ export const IKJacobianDrawer: React.FC<IKJacobianDrawerProps> = ({
                 }`}
               >
                 <Move className="w-3.5 h-3.5" />
-                <span>Tịnh tiến (Translate)</span>
+                <span>{isVi ? 'Tịnh tiến (Translate)' : 'Translate'}</span>
               </button>
               <button
                 onClick={() => handleModeChange('rotate')}
@@ -119,7 +122,7 @@ export const IKJacobianDrawer: React.FC<IKJacobianDrawerProps> = ({
                 }`}
               >
                 <RotateCw className="w-3.5 h-3.5" />
-                <span>Xoay góc (Rotate)</span>
+                <span>{language === 'vi' ? 'Xoay góc (Rotate)' : 'Rotate Mode'}</span>
               </button>
             </div>
           )}
@@ -131,7 +134,7 @@ export const IKJacobianDrawer: React.FC<IKJacobianDrawerProps> = ({
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
                 <Compass className="w-4 h-4 text-amber-400" />
-                <span>PUMA 560: 8 Cấu hình Động học ngược</span>
+                <span>{language === 'vi' ? 'PUMA 560: 8 Cấu hình Động học ngược' : 'PUMA 560: 8 Inverse Kinematic Postures'}</span>
               </h3>
               <span className="text-[10px] font-mono text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
                 Analytical Closed-Form
@@ -139,9 +142,9 @@ export const IKJacobianDrawer: React.FC<IKJacobianDrawerProps> = ({
             </div>
 
             <p className="text-[11px] text-slate-400">
-              Cùng một tọa độ TCP đích, robot có tới 8 nghiệm giải tích độc lập:
+              {language === 'vi' ? 'Cùng một tọa độ TCP đích, robot có tới 8 nghiệm giải tích độc lập:' : 'For a given Cartesian TCP target, the spherical-wrist manipulator admits 8 closed-form postures:'}
               <b className="text-slate-300"> (Shoulder Left/Right) × (Elbow Down/Up) × (Wrist Flip/No-Flip)</b>.
-              Bấm vào từng cấu hình bên dưới để chuyển tư thế ngay lập tức:
+              {language === 'vi' ? 'Bấm vào từng cấu hình bên dưới để chuyển tư thế ngay lập tức:' : 'Select any posture below for instantaneous posture switching:'}
             </p>
 
             <div className="grid grid-cols-2 gap-2">
@@ -173,7 +176,7 @@ export const IKJacobianDrawer: React.FC<IKJacobianDrawerProps> = ({
                 })
               ) : (
                 <div className="col-span-2 p-3 text-center text-xs font-mono text-amber-400/80 bg-amber-500/10 rounded-lg border border-amber-500/20">
-                  Tọa độ mục tiêu nằm ngoài tầm với hoặc rơi vào vùng kỳ dị vai.
+                  {language === 'vi' ? 'Tọa độ mục tiêu nằm ngoài tầm với hoặc rơi vào vùng kỳ dị vai.' : 'Target pose is outside workspace reach or in shoulder boundary singularity.'}
                 </div>
               )}
             </div>
@@ -187,7 +190,7 @@ export const IKJacobianDrawer: React.FC<IKJacobianDrawerProps> = ({
               <div className="flex items-center space-x-2">
                 <Sparkles className="w-4 h-4 text-cyan-400" />
                 <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
-                  Khả năng thao tác (Manipulability)
+                  {language === 'vi' ? 'Khả năng thao tác (Manipulability)' : 'Kinematic Manipulability'}
                 </span>
               </div>
               <button
@@ -210,7 +213,7 @@ export const IKJacobianDrawer: React.FC<IKJacobianDrawerProps> = ({
                 </span>
               </div>
               <div className="bg-slate-900/90 border border-slate-800 rounded-lg p-2.5">
-                <span className="text-[10px] text-slate-400 block">Trị dị thường (Singular Values)</span>
+                <span className="text-[10px] text-slate-400 block">{language === 'vi' ? 'Trị dị thường (Singular Values)' : 'Singular Values'}</span>
                 <span className="text-xs font-semibold text-slate-200">
                   [{manipulabilityInfo.singularValues.join(', ')}]
                 </span>
@@ -220,7 +223,7 @@ export const IKJacobianDrawer: React.FC<IKJacobianDrawerProps> = ({
             {manipulabilityInfo.isNearSingularity && (
               <div className="flex items-center space-x-2 bg-rose-500/15 border border-rose-500/30 rounded-lg p-2.5 text-rose-300 text-xs font-mono">
                 <AlertTriangle className="w-4 h-4 flex-shrink-0 text-rose-400" />
-                <span>Cảnh báo: Robot đang ở trạng thái suy biến động học (Singularity)! w(q) tiến về 0.</span>
+                <span>{language === 'vi' ? 'Cảnh báo: Robot đang ở trạng thái suy biến động học (Singularity)! w(q) tiến về 0.' : 'Warning: Kinematic Singularity detected! Manipulability w(q) approaches zero.'}</span>
               </div>
             )}
           </div>
@@ -232,9 +235,9 @@ export const IKJacobianDrawer: React.FC<IKJacobianDrawerProps> = ({
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
                 <Layers className="w-4 h-4 text-sky-400" />
-                <span>Ma trận Geometric Jacobian J(q) [6 × {robotModel.dof}]</span>
+                <span>{language === 'vi' ? `Ma trận Geometric Jacobian J(q) [6 × ${robotModel.dof}]` : `Geometric Jacobian Matrix J(q) [6 × ${robotModel.dof}]`}</span>
               </h3>
-              <span className="text-[10px] font-mono text-sky-400">Thời gian thực</span>
+              <span className="text-[10px] font-mono text-sky-400">{language === 'vi' ? 'Thời gian thực' : 'Real-Time'}</span>
             </div>
 
             <div className="overflow-x-auto rounded-lg border border-slate-800 bg-slate-950/70 p-2">
@@ -271,7 +274,7 @@ export const IKJacobianDrawer: React.FC<IKJacobianDrawerProps> = ({
               </table>
             </div>
             <p className="text-[10px] text-slate-500 font-mono">
-              3 hàng đầu: Jacobian vận tốc dài J_v; 3 hàng cuối: Jacobian vận tốc góc J_ω.
+              {language === 'vi' ? '3 hàng đầu: Jacobian vận tốc dài J_v; 3 hàng cuối: Jacobian vận tốc góc J_ω.' : 'Top 3 rows: Linear velocity J_v; Bottom 3 rows: Angular velocity J_ω.'}
             </p>
           </div>
         )}

@@ -1,3 +1,4 @@
+import { useTranslation } from '../../i18n';
 import React, { useState, useMemo } from 'react';
 import * as THREE from 'three';
 import {
@@ -19,6 +20,7 @@ export const VirtualCaliperModal: React.FC<VirtualCaliperModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  const { t, language } = useTranslation();
   const { robotModel, jointAngles } = useRobotStore();
 
   // Compute forward kinematics frames for each joint
@@ -93,7 +95,7 @@ export const VirtualCaliperModal: React.FC<VirtualCaliperModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Đo lường chính xác khoảng cách 3D Euclid và thành phần Descartes giữa các điểm mốc
+                {language === 'vi' ? 'Đo lường chính xác khoảng cách 3D Euclid và thành phần Descartes giữa các điểm mốc' : 'Accurate 3D Euclidean and Cartesian distance measurement between landmarks'}
               </p>
             </div>
           </div>
@@ -101,7 +103,7 @@ export const VirtualCaliperModal: React.FC<VirtualCaliperModalProps> = ({
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-            title="Đóng (Esc)"
+            title={t.common.close}
           >
             <X className="w-5 h-5" />
           </button>
@@ -115,7 +117,7 @@ export const VirtualCaliperModal: React.FC<VirtualCaliperModalProps> = ({
             <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
               <label className="flex items-center space-x-2 text-xs font-semibold text-emerald-400 mb-2">
                 <Crosshair className="w-4 h-4" />
-                <span>Điểm mốc A (Điểm đầu)</span>
+                <span>{language === 'vi' ? 'Điểm mốc A (Điểm đầu)' : 'Reference Landmark A (Start Point)'}</span>
               </label>
               <select
                 value={ptAIndex}
@@ -139,7 +141,7 @@ export const VirtualCaliperModal: React.FC<VirtualCaliperModalProps> = ({
             <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
               <label className="flex items-center space-x-2 text-xs font-semibold text-sky-400 mb-2">
                 <Crosshair className="w-4 h-4" />
-                <span>Điểm mốc B (Điểm cuối)</span>
+                <span>{language === 'vi' ? 'Điểm mốc B (Điểm cuối)' : 'Reference Landmark B (End Point)'}</span>
               </label>
               <select
                 value={ptBIndex}
@@ -164,7 +166,7 @@ export const VirtualCaliperModal: React.FC<VirtualCaliperModalProps> = ({
           <div className="p-4 rounded-xl bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
               <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-400">
-                Khoảng cách không gian 3D Euclid (d_Euclid):
+                {language === 'vi' ? 'Khoảng cách không gian 3D Euclid (d_Euclid):' : '3D Euclidean Spatial Distance (d_Euclid):'}
               </span>
               <div className="flex items-baseline space-x-3 mt-1">
                 <span className="text-2xl font-bold font-mono text-emerald-400">
@@ -178,26 +180,26 @@ export const VirtualCaliperModal: React.FC<VirtualCaliperModalProps> = ({
 
             <div className="flex items-center space-x-2 text-xs font-mono bg-slate-900/80 px-3.5 py-2 rounded-xl border border-slate-800">
               <Maximize2 className="w-4 h-4 text-sky-400" />
-              <span>Reach tối đa danh định: <strong>{robotModel.reachMm} mm</strong></span>
+              <span>{language === 'vi' ? 'Reach tối đa danh định:' : 'Nominal Maximum Reach:'} <strong>{robotModel.reachMm} mm</strong></span>
             </div>
           </div>
 
           {/* Component Deltas */}
           <div className="grid grid-cols-3 gap-3">
             <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-center">
-              <span className="text-[10px] uppercase font-mono text-slate-400">ΔX (Độ lệch trục X)</span>
+              <span className="text-[10px] uppercase font-mono text-slate-400">{language === 'vi' ? 'ΔX (Độ lệch trục X)' : 'ΔX (X-Axis Offset)'}</span>
               <p className="text-sm font-mono font-bold text-rose-400 mt-1">
                 {dx >= 0 ? `+${dx.toFixed(1)}` : dx.toFixed(1)} mm
               </p>
             </div>
             <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-center">
-              <span className="text-[10px] uppercase font-mono text-slate-400">ΔY (Độ lệch trục Y)</span>
+              <span className="text-[10px] uppercase font-mono text-slate-400">{language === 'vi' ? 'ΔY (Độ lệch trục Y)' : 'ΔY (Y-Axis Offset)'}</span>
               <p className="text-sm font-mono font-bold text-emerald-400 mt-1">
                 {dy >= 0 ? `+${dy.toFixed(1)}` : dy.toFixed(1)} mm
               </p>
             </div>
             <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-center">
-              <span className="text-[10px] uppercase font-mono text-slate-400">ΔZ (Độ lệch chiều cao Z)</span>
+              <span className="text-[10px] uppercase font-mono text-slate-400">{language === 'vi' ? 'ΔZ (Độ lệch chiều cao Z)' : 'ΔZ (Z-Axis Elevation)'}</span>
               <p className="text-sm font-mono font-bold text-sky-400 mt-1">
                 {dz >= 0 ? `+${dz.toFixed(1)}` : dz.toFixed(1)} mm
               </p>
@@ -208,7 +210,7 @@ export const VirtualCaliperModal: React.FC<VirtualCaliperModalProps> = ({
           <div className="p-3 rounded-xl bg-sky-950/20 border border-sky-800/40 text-xs text-slate-300 flex items-start space-x-2">
             <Info className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
             <p className="leading-relaxed">
-              <strong>Ứng dụng kiểm chứng D-H:</strong> Khi đo khoảng cách giữa hai gốc tọa độ liền kề O_(i-1) và O_i tại vị trí ban đầu θ = 0, khoảng cách chiếu theo trục z_(i-1) chính là độ dịch chuyển d_i, và khoảng cách chiếu theo trục x_i chính là chiều dài khâu a_i.
+              {language === 'vi' ? <><strong>Ứng dụng kiểm chứng D-H:</strong> Khi đo khoảng cách giữa hai gốc tọa độ liền kề O_(i-1) và O_i tại vị trí ban đầu θ = 0, khoảng cách chiếu theo trục z_(i-1) chính là độ dịch chuyển d_i, và khoảng cách chiếu theo trục x_i chính là chiều dài khâu a_i.</> : <><strong>D-H Geometric Verification:</strong> When measuring the distance between adjacent frame origins O_(i-1) and O_i at the zero pose θ = 0, the projection along the z_(i-1) axis gives the link offset d_i, and the projection along the x_i axis yields the link length a_i.</>}
             </p>
           </div>
         </div>
@@ -219,7 +221,7 @@ export const VirtualCaliperModal: React.FC<VirtualCaliperModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-semibold transition"
           >
-            Đóng thước đo
+            {language === 'vi' ? 'Đóng thước đo' : 'Close Caliper'}
           </button>
         </div>
       </div>

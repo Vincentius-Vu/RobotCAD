@@ -3,6 +3,7 @@ import { useRobotStore } from '../store/robotStore';
 import { useMobileRobotStore } from '../store/mobileRobotStore';
 import { AVAILABLE_ROBOTS } from '../services/robotLoader';
 import { WorkspaceMode } from '../types/ui';
+import { useTranslation } from '../i18n';
 import {
   Bot,
   Sliders,
@@ -44,6 +45,8 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
   onOpenReport,
   onOpenOscilloscopeDialog,
 }) => {
+  const { t, language, toggleLanguage } = useTranslation();
+
   const {
     activeDomain,
     setActiveDomain,
@@ -74,11 +77,11 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
   } = useMobileRobotStore();
 
   const modes: { id: WorkspaceMode; label: string; icon: React.ReactNode }[] = [
-    { id: 'jogging', label: 'Jogging & FK', icon: <Sliders className="w-3.5 h-3.5" /> },
-    { id: 'ik', label: 'IK & Gizmo', icon: <Activity className="w-3.5 h-3.5" /> },
-    { id: 'trajectory', label: 'Trajectory Studio', icon: <Waypoints className="w-3.5 h-3.5" /> },
-    { id: 'workspace', label: 'Workspace Cloud', icon: <Globe className="w-3.5 h-3.5" /> },
-    { id: 'dynamics', label: 'Dynamics Lab', icon: <Cpu className="w-3.5 h-3.5" /> },
+    { id: 'jogging', label: t.topRibbon.joggingTab, icon: <Sliders className="w-3.5 h-3.5" /> },
+    { id: 'ik', label: t.topRibbon.ikTab, icon: <Activity className="w-3.5 h-3.5" /> },
+    { id: 'trajectory', label: t.topRibbon.trajectoryTab, icon: <Waypoints className="w-3.5 h-3.5" /> },
+    { id: 'workspace', label: t.topRibbon.workspaceTab, icon: <Globe className="w-3.5 h-3.5" /> },
+    { id: 'dynamics', label: t.topRibbon.dynamicsTab, icon: <Cpu className="w-3.5 h-3.5" /> },
   ];
 
   const formatRec = (s: number) => {
@@ -96,7 +99,7 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
         <button
           onClick={toggleLeftSidebar}
           className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
-          title={isLeftSidebarOpen ? 'Collapse Left Sidebar' : 'Expand Left Sidebar'}
+          title={isLeftSidebarOpen ? t.topRibbon.collapseLeft : t.topRibbon.expandLeft}
         >
           {isLeftSidebarOpen ? (
             <PanelLeftClose className="w-4 h-4" />
@@ -110,7 +113,7 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
             <Bot className="w-4 h-4" />
           </div>
           <span className="text-xs font-bold text-slate-100 hidden sm:inline">
-            RoboCAD 3D
+            {t.topRibbon.brandName}
           </span>
         </div>
 
@@ -126,7 +129,7 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <span>🦾 Cánh tay</span>
+            <span>{t.topRibbon.domainManipulator}</span>
           </button>
           <button
             onClick={() => setActiveDomain('mobile_robot')}
@@ -136,7 +139,7 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <span>🚗 Xe AMR</span>
+            <span>{t.topRibbon.domainMobile}</span>
           </button>
         </div>
 
@@ -205,7 +208,7 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            🎥 Bám đuôi (Chase Cam)
+            🎥 {t.topRibbon.camFollow}
           </button>
           <button
             onClick={() => setMobileCameraMode('top_down')}
@@ -215,12 +218,12 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            🗺️ Bản đồ 2D (Top-Down)
+            🗺️ {t.topRibbon.camTop}
           </button>
         </div>
       )}
 
-      {/* Right: Quick Overlays, Video Rec, Snapshot, Right Inspector Toggle */}
+      {/* Right: Quick Overlays, Language Toggle, Video Rec, Snapshot, Right Inspector Toggle */}
       <div className="flex items-center space-x-2">
         {/* Quick Overlays */}
         <div className="hidden lg:flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800 space-x-0.5">
@@ -231,7 +234,7 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
                 ? 'bg-sky-500/20 text-sky-300'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
-            title="Toggle D-H Frames {0}..{6}"
+            title={t.topRibbon.framesTooltip}
           >
             <Layers className="w-3.5 h-3.5" />
           </button>
@@ -243,9 +246,9 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
                   ? 'bg-sky-500/20 text-sky-300 rounded-l'
                   : 'text-slate-400 hover:text-slate-200 rounded'
               }`}
-              title="Toggle Kinematic Skeleton"
+              title={t.topRibbon.skeletonTooltip}
             >
-              Skel
+              {t.topRibbon.skeleton}
             </button>
             {overlays.showSkeleton && (
               <button
@@ -255,13 +258,9 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
                     ? 'bg-emerald-950/80 hover:bg-emerald-900 border-emerald-700/60 text-emerald-300'
                     : 'bg-amber-950/80 hover:bg-amber-900 border-amber-700/60 text-amber-300'
                 }`}
-                title={`Chế độ khung xương: ${
-                  overlays.skeletonMode === 'physical'
-                    ? 'Cơ học thực tế (Physical Linkage) - Khớp & xương đi trực tiếp qua thân vỏ CAD'
-                    : 'Hệ trục D-H toán học (Mathematical D-H) - Theo bảng thông số Craig/Siciliano (gốc {2} lệch ngoài do d2=0)'
-                }. Bấm để đổi chế độ.`}
+                title={t.topRibbon.skeletonTooltip}
               >
-                {overlays.skeletonMode === 'physical' ? 'Phys' : 'D-H'}
+                {overlays.skeletonMode === 'physical' ? t.topRibbon.skeletonPhys : t.topRibbon.skeletonDH}
               </button>
             )}
           </div>
@@ -272,9 +271,9 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
                 ? 'bg-sky-500/20 text-sky-300'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
-            title="Toggle Ground Grid Floor"
+            title={t.topRibbon.gridTooltip}
           >
-            Grid
+            {t.topRibbon.grid}
           </button>
         </div>
 
@@ -284,13 +283,25 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
             setBackgroundTheme(isWhitePaper ? 'studio-dark' : 'academic-white')
           }
           className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-750 border border-slate-700 transition"
-          title={isWhitePaper ? 'Switch to Studio Dark' : 'Switch to Academic Paper White (#FFF)'}
+          title={isWhitePaper ? t.topRibbon.darkModeTitle : t.topRibbon.paperWhiteTitle}
         >
           {isWhitePaper ? (
             <Moon className="w-3.5 h-3.5 text-sky-400" />
           ) : (
             <Sun className="w-3.5 h-3.5 text-amber-400" />
           )}
+        </button>
+
+        {/* Academic Language En/Vie Switcher */}
+        <button
+          onClick={toggleLanguage}
+          className="flex items-center space-x-1 px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700 transition font-mono text-[11px] font-semibold"
+          title={language === 'en' ? 'Switch to Tiếng Việt' : 'Switch to Academic English'}
+        >
+          <Globe className="w-3.5 h-3.5 text-sky-400" />
+          <span className={language === 'en' ? 'text-sky-400 font-bold' : 'text-slate-400'}>EN</span>
+          <span className="text-slate-600">|</span>
+          <span className={language === 'vi' ? 'text-amber-400 font-bold' : 'text-slate-400'}>VI</span>
         </button>
 
         {/* Video Recording */}
@@ -301,7 +312,7 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
               ? 'bg-rose-600/30 text-rose-300 border-rose-500 shadow-md shadow-rose-600/20'
               : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white hover:bg-slate-750'
           }`}
-          title={isRecording ? 'Stop Recording' : 'Record 3D Simulation Video'}
+          title={isRecording ? t.topRibbon.stopRecord : t.topRibbon.recordVideo}
         >
           <span
             className={`w-2 h-2 rounded-full ${
@@ -309,7 +320,7 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
             }`}
           />
           <span className="hidden sm:inline">
-            {isRecording ? formatRec(recordingSeconds) : 'Rec'}
+            {isRecording ? formatRec(recordingSeconds) : t.topRibbon.rec}
           </span>
         </button>
 
@@ -317,7 +328,7 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
         <button
           onClick={onOpenExportPNG}
           className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700 transition"
-          title="Export High-Resolution Figure PNG (96 / 150 / 300 / 600 DPI)"
+          title={t.topRibbon.snapshotDPI}
         >
           <Camera className="w-3.5 h-3.5 text-amber-400" />
         </button>
@@ -326,7 +337,7 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
         <button
           onClick={onOpenDHQuiz}
           className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 hover:text-amber-300 border border-amber-500/30 transition"
-          title="D-H Interactive Quiz Lab (Kiểm tra gán trục D-H & Chấm điểm tự động)"
+          title={t.topRibbon.dhQuiz}
         >
           <GraduationCap className="w-3.5 h-3.5" />
         </button>
@@ -335,7 +346,7 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
         <button
           onClick={onOpenCaliper}
           className="p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 transition"
-          title="Virtual 3D Caliper & Dimension Inspector (Thước đo kích thước 3D)"
+          title={t.topRibbon.caliper}
         >
           <Ruler className="w-3.5 h-3.5" />
         </button>
@@ -344,7 +355,7 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
         <button
           onClick={onOpenCodeExport}
           className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 hover:text-sky-300 border border-sky-500/30 font-mono text-xs font-semibold transition"
-          title="Export Executable Code (Python, C++ Eigen, MATLAB, ROS 2 URDF)"
+          title={t.topRibbon.codeExport}
         >
           <Code className="w-3.5 h-3.5" />
           <span className="hidden md:inline">Code</span>
@@ -354,7 +365,7 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
         <button
           onClick={onOpenReport}
           className="p-1.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 hover:text-purple-300 border border-purple-500/30 transition"
-          title="Xuất Báo cáo Kỹ thuật, Bảng D-H & Mã LaTeX"
+          title={t.topRibbon.academicReport}
         >
           <FileText className="w-3.5 h-3.5" />
         </button>
@@ -363,7 +374,7 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
         <button
           onClick={onOpenOscilloscopeDialog}
           className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 hover:text-sky-300 border border-sky-500/40 font-mono text-xs font-semibold transition shadow-sm"
-          title="Mở Bộ Dao Động Ký & Phân Tích Vật Lý Đa Miền (Động cơ, Biến tần, Bus DC, Mô-men) - Hỗ trợ Cửa sổ Rời Đa Màn Hình"
+          title={t.topRibbon.oscilloscope}
         >
           <Activity className="w-3.5 h-3.5 text-sky-400" />
           <span className="hidden lg:inline">Oscilloscope</span>
@@ -373,7 +384,7 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
         <button
           onClick={onOpenEnvCamera}
           className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700 transition"
-          title="Lighting & Camera Adjustment"
+          title={t.topRibbon.lightingCamera}
         >
           <SlidersHorizontal className="w-3.5 h-3.5" />
         </button>
@@ -388,7 +399,7 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
               ? 'bg-sky-600 text-white border-sky-500 shadow-md shadow-sky-600/30'
               : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white hover:bg-slate-750'
           }`}
-          title="Toggle Analytical Inspector (D-H, Jacobian, Passport)"
+          title={t.topRibbon.inspector}
         >
           {isRightInspectorOpen ? (
             <PanelRightClose className="w-4 h-4" />

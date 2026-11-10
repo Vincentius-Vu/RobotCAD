@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRobotStore } from '../../store/robotStore';
+import { useTranslation } from '../../i18n';
 import {
   Zap,
   FileSpreadsheet,
@@ -9,6 +10,7 @@ import {
 } from 'lucide-react';
 
 export const TorqueOscilloscope: React.FC = () => {
+  const { t, language } = useTranslation();
   const {
     robotModel,
     trajectoryTorques,
@@ -153,7 +155,7 @@ export const TorqueOscilloscope: React.FC = () => {
         <div className="flex items-center space-x-2">
           <Zap className="w-4 h-4 text-amber-400" />
           <h4 className="text-xs font-mono font-bold text-slate-100 uppercase tracking-wider">
-            Torque Dynamics Oscilloscope (Mô-men Khớp τ)
+            {language === 'vi' ? 'Torque Dynamics Oscilloscope (Mô-men Khớp τ)' : 'Dynamic Joint Torque Oscilloscope τ(t)'}
           </h4>
         </div>
 
@@ -167,7 +169,7 @@ export const TorqueOscilloscope: React.FC = () => {
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            Quỹ đạo τ(t)
+            {language === 'vi' ? 'Quỹ đạo τ(t)' : 'Torque Trajectory τ(t)'}
           </button>
           <button
             onClick={() => setDisplayMode('live')}
@@ -229,19 +231,19 @@ export const TorqueOscilloscope: React.FC = () => {
                 {dynamicsSettings.isRunning ? (
                   <>
                     <Pause className="w-3.5 h-3.5 fill-current" />
-                    <span>Dừng</span>
+                    <span>{t.common.pause}</span>
                   </>
                 ) : (
                   <>
                     <Play className="w-3.5 h-3.5 fill-current" />
-                    <span>Mô phỏng</span>
+                    <span>{t.common.run}</span>
                   </>
                 )}
               </button>
               <button
                 onClick={resetDynamicsSimulation}
                 className="p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white border border-slate-700"
-                title="Khôi phục trạng thái ban đầu"
+                title={t.common.reset}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
@@ -252,7 +254,7 @@ export const TorqueOscilloscope: React.FC = () => {
             onClick={handleExportCSV}
             disabled={!hasTrajectory}
             className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-mono transition disabled:opacity-40"
-            title="Xuất dữ liệu mô-men ra CSV"
+            title={t.common.export}
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
             <span>CSV</span>
@@ -264,11 +266,11 @@ export const TorqueOscilloscope: React.FC = () => {
       <div className="relative bg-slate-950/80 border border-slate-800 rounded-xl p-3 shadow-inner">
         <div className="flex items-center justify-between mb-1 px-2">
           <span className="text-[11px] font-mono font-bold text-amber-300">
-            Mô-men Khớp Động cơ τ_i(t) [N·m]
+            {language === 'vi' ? 'Mô-men Khớp Động cơ τ_i(t) [N·m]' : 'Actuated Joint Dynamic Torques τ_i(t) [N·m]'}
           </span>
           {activeDynamicState && displayMode === 'live' && (
             <span className="text-[10px] font-mono text-cyan-400">
-              Công suất cơ học / Năng lượng: T = {activeDynamicState.kineticEnergy.toFixed(2)} J | V = {activeDynamicState.potentialEnergy.toFixed(2)} J
+              {language === 'vi' ? 'Công suất cơ học / Năng lượng:' : 'Mechanical Work / Energy:'} T = {activeDynamicState.kineticEnergy.toFixed(2)} J | V = {activeDynamicState.potentialEnergy.toFixed(2)} J
             </span>
           )}
         </div>
@@ -389,14 +391,14 @@ export const TorqueOscilloscope: React.FC = () => {
           {/* Empty State Overlay when no trajectory data */}
           {displayMode === 'trajectory' && !hasTrajectory && (
             <text x={padL + plotW / 2} y={padT + plotH / 2} textAnchor="middle" fill="#94a3b8" fontSize="12" fontFamily="monospace">
-              Đang tính toán mô-men RNE cho quỹ đạo hiện tại...
+              {language === 'vi' ? 'Đang tính toán mô-men RNE cho quỹ đạo hiện tại...' : 'Computing Recursive Newton-Euler dynamic torques for current trajectory...'}
             </text>
           )}
 
           {/* Empty State Overlay when live simulation paused */}
           {displayMode === 'live' && !hasLiveSamples && (
             <text x={padL + plotW / 2} y={padT + plotH / 2} textAnchor="middle" fill="#94a3b8" fontSize="12" fontFamily="monospace">
-              Nhấn nút [Mô phỏng] ở góc trên để bắt đầu vẽ dao động ký thời gian thực
+              {language === 'vi' ? 'Nhấn nút [Mô phỏng] ở góc trên để bắt đầu vẽ dao động ký thời gian thực' : 'Click [Simulate] above to stream real-time multi-physics waveforms'}
             </text>
           )}
         </svg>

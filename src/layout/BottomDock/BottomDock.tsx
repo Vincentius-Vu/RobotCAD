@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { useRobotStore } from '../../store/robotStore';
 import { useMobileRobotStore } from '../../store/mobileRobotStore';
+import { useTranslation } from '../../i18n';
 import { MotionProfilePlots } from '../../components/Trajectory/MotionProfilePlots';
 import { TorqueOscilloscope } from '../../components/Dynamics/TorqueOscilloscope';
 import { MobileRobotOscilloscope } from '../../components/Dynamics/MobileRobotOscilloscope';
@@ -22,6 +23,7 @@ interface BottomDockProps {
 }
 
 export const BottomDock: React.FC<BottomDockProps> = ({ onOpenOscilloscopeDialog }) => {
+  const { t } = useTranslation();
   const {
     activeDomain,
     activeTrajectory,
@@ -152,7 +154,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({ onOpenOscilloscopeDialog
           <div
             onMouseDown={handleMouseDown}
             className="h-2 w-full bg-slate-900 hover:bg-sky-500/40 active:bg-sky-500 cursor-row-resize flex items-center justify-center transition-colors group shrink-0 select-none border-b border-slate-800/80"
-            title="Kéo lên/xuống để thay đổi độ cao panel đồ thị"
+            title={t.bottomDock.dragHeightTooltip}
           >
             <div className="w-12 h-1 rounded-full bg-slate-700 group-hover:bg-sky-300 transition-colors flex items-center justify-center">
               <GripHorizontal className="w-3 h-3 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -177,13 +179,13 @@ export const BottomDock: React.FC<BottomDockProps> = ({ onOpenOscilloscopeDialog
                   <button
                     onClick={() => onOpenOscilloscopeDialog?.()}
                     className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-sky-950/60 hover:bg-sky-600/30 text-sky-300 border border-sky-500/40 text-[11px] font-mono font-medium transition shadow-sm"
-                    title="Mở toàn bộ Đồ thị Đa Miền ra Dialog / Cửa sổ rời Đa màn hình"
+                    title={t.bottomDock.popOutTooltip}
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Mở Dialog / Đa Màn Hình</span>
+                    <span>{t.bottomDock.popOutBtn}</span>
                   </button>
                   <span className="text-[10px] text-slate-500 hidden sm:inline">
-                    Kéo mép trên để đổi độ cao
+                    {t.bottomDock.dragHeightNotice}
                   </span>
                 </div>
               </div>
@@ -218,7 +220,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({ onOpenOscilloscopeDialog
                     }`}
                   >
                     <Zap className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Torque Oscilloscope (τ)</span>
+                    <span>{t.bottomDock.torqueOscilloscope}</span>
                   </button>
                 </div>
 
@@ -226,13 +228,13 @@ export const BottomDock: React.FC<BottomDockProps> = ({ onOpenOscilloscopeDialog
                   <button
                     onClick={() => onOpenOscilloscopeDialog?.()}
                     className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-sky-950/60 hover:bg-sky-600/30 text-sky-300 border border-sky-500/40 text-[11px] font-mono font-medium transition shadow-sm"
-                    title="Mở toàn bộ Đồ thị Đa Miền (Động cơ, Biến tần, Mô-men) ra Dialog / Cửa sổ rời Đa màn hình"
+                    title={t.bottomDock.popOutTorqueTooltip}
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Mở Dialog / Đa Màn Hình</span>
+                    <span>{t.bottomDock.popOutBtn}</span>
                   </button>
                   <span className="text-[10px] text-slate-500 hidden sm:inline">
-                    Kéo mép trên để đổi độ cao
+                    {t.bottomDock.dragHeightNotice}
                   </span>
                 </div>
               </div>
@@ -257,17 +259,17 @@ export const BottomDock: React.FC<BottomDockProps> = ({ onOpenOscilloscopeDialog
                   ? 'bg-amber-600 hover:bg-amber-500 text-white'
                   : 'bg-emerald-600 hover:bg-emerald-500 text-white'
               }`}
-              title={isMobileSimRunning ? 'Tạm dừng mô phỏng động lực học' : 'Tiếp tục mô phỏng'}
+              title={isMobileSimRunning ? t.bottomDock.pauseTooltip : t.bottomDock.resumeTooltip}
             >
               {isMobileSimRunning ? (
                 <>
                   <Pause className="w-3.5 h-3.5 fill-current" />
-                  <span className="hidden sm:inline">Tạm dừng</span>
+                  <span className="hidden sm:inline">{t.bottomDock.pause}</span>
                 </>
               ) : (
                 <>
                   <Play className="w-3.5 h-3.5 fill-current" />
-                  <span className="hidden sm:inline">Mô phỏng</span>
+                  <span className="hidden sm:inline">{t.bottomDock.simulate}</span>
                 </>
               )}
             </button>
@@ -275,7 +277,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({ onOpenOscilloscopeDialog
             <button
               onClick={resetMobilePose}
               className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700 transition"
-              title="Đặt lại vị trí ban đầu (Reset Pose)"
+              title={t.bottomDock.resetPoseTooltip}
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
@@ -283,9 +285,9 @@ export const BottomDock: React.FC<BottomDockProps> = ({ onOpenOscilloscopeDialog
             <button
               onClick={clearMobileTrace}
               className="px-2 py-1 rounded-lg bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700 transition text-[11px] font-mono hidden md:inline"
-              title="Xóa vệt di chuyển trên sàn"
+              title={t.bottomDock.clearTraceTooltip}
             >
-              Xóa vệt
+              {t.bottomDock.clearTrace}
             </button>
           </div>
 
@@ -304,10 +306,10 @@ export const BottomDock: React.FC<BottomDockProps> = ({ onOpenOscilloscopeDialog
               />
               <span className="text-slate-300">
                 {isMobileNavigating
-                  ? `Bám quỹ đạo A* (${mobileWpIndex + 1}/${mobilePlannedPath.length})`
+                  ? `${t.bottomDock.trackingRoute} (${mobileWpIndex + 1}/${mobilePlannedPath.length})`
                   : isMobileSimRunning
-                  ? 'Mô phỏng đang chạy'
-                  : 'Tạm dừng'}
+                  ? t.bottomDock.simRunning
+                  : t.bottomDock.simPaused}
               </span>
             </div>
 
@@ -363,7 +365,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({ onOpenOscilloscopeDialog
                   ? 'bg-sky-600 text-white border-sky-500 shadow-md font-bold'
                   : 'bg-slate-800 text-sky-400 border-slate-700 hover:text-white hover:bg-slate-750'
               }`}
-              title="Mở bảng đồ thị dao động ký đa vật lý Mobile Robot AMR"
+              title={t.bottomDock.mobileOscilloscopeTooltip}
             >
               <Activity className="w-3.5 h-3.5" />
               <span>AMR Oscilloscope</span>
@@ -377,7 +379,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({ onOpenOscilloscopeDialog
             <button
               onClick={() => onOpenOscilloscopeDialog?.()}
               className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium bg-sky-950/60 text-sky-300 border-sky-500/40 hover:bg-sky-600 hover:text-white transition shadow-sm"
-              title="Mở toàn bộ Đồ thị Đa Miền ra Dialog / Cửa sổ rời Đa màn hình"
+              title={t.bottomDock.popOutTooltip}
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span className="hidden md:inline">Scope Pop-out</span>
@@ -501,7 +503,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({ onOpenOscilloscopeDialog
                   ? 'bg-purple-600 text-white border-purple-500 shadow-md font-bold'
                   : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white hover:bg-slate-750'
               }`}
-              title="Mở đồ thị động học Vị trí, Vận tốc, Gia tốc (q, v, a)"
+              title={t.bottomDock.kinematicPlotsTooltip}
             >
               <Activity className="w-3.5 h-3.5 text-purple-400" />
               <span className="hidden sm:inline">Curves (q,v,a)</span>
@@ -526,10 +528,10 @@ export const BottomDock: React.FC<BottomDockProps> = ({ onOpenOscilloscopeDialog
                   ? 'bg-amber-600 text-white border-amber-500 shadow-md font-bold'
                   : 'bg-slate-800 text-amber-400 border-slate-700 hover:text-white hover:bg-slate-750'
               }`}
-              title="Mở dao động ký Mô-men động cơ τ_i(t)"
+              title={t.bottomDock.torquePlotsTooltip}
             >
               <Zap className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">Torques (τ)</span>
+              <span className="hidden sm:inline">{t.bottomDock.torques}</span>
               {isBottomDockExpanded && bottomDockTab === 'torques' ? (
                 <ChevronDown className="w-3.5 h-3.5" />
               ) : (
@@ -541,7 +543,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({ onOpenOscilloscopeDialog
             <button
               onClick={() => onOpenOscilloscopeDialog?.()}
               className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium bg-sky-950/60 text-sky-300 border-sky-500/40 hover:bg-sky-600 hover:text-white transition shadow-sm"
-              title="Mở toàn bộ Đồ thị Đa Miền (Động cơ, Biến tần, Mô-men) ra Dialog / Cửa sổ rời Đa màn hình"
+              title={t.bottomDock.popOutTorqueTooltip}
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span className="hidden md:inline">Scope Pop-out</span>

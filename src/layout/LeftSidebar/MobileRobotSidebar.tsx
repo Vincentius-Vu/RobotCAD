@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useMobileRobotStore } from '../../store/mobileRobotStore';
+import { useTranslation } from '../../i18n';
 import { useRobotStore } from '../../store/robotStore';
 import {
   Navigation,
@@ -19,6 +20,8 @@ import {
 } from 'lucide-react';
 
 export const MobileRobotSidebar: React.FC = () => {
+  const { t, language } = useTranslation();
+  const isVi = language === 'vi';
   const { openAddPoseModal } = useRobotStore();
   const {
     specs,
@@ -96,7 +99,7 @@ export const MobileRobotSidebar: React.FC = () => {
     const y = Number(((Math.random() - 0.5) * 6).toFixed(1));
     addObstacle({
       id: newId,
-      name: `Vật cản trụ tròn`,
+      name: isVi ? `Vật cản trụ tròn` : `Cylinder Obstacle`,
       type: 'cylinder',
       position: { x, y, z: 0.8 },
       dimensions: { radius: 0.35, height: 1.6 },
@@ -110,7 +113,7 @@ export const MobileRobotSidebar: React.FC = () => {
     const y = Number(((Math.random() - 0.5) * 6).toFixed(1));
     addObstacle({
       id: newId,
-      name: `Kiện hàng Pallet`,
+      name: isVi ? `Kiện hàng Pallet` : `Pallet Cargo`,
       type: 'box',
       position: { x, y, z: 0.5 },
       dimensions: { width: 1.0, depth: 0.8, height: 1.0 },
@@ -125,10 +128,10 @@ export const MobileRobotSidebar: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Cpu className="w-4 h-4 text-indigo-400" />
-            <span className="font-semibold text-slate-100">Bản sao Số (Digital Twin)</span>
+            <span className="font-semibold text-slate-100">{t.mobile.digitalTwinTitle}</span>
           </div>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
-            Hệ Đa Vật Lý
+            {t.mobile.multiPhysicsSubTitle}
           </span>
         </div>
 
@@ -143,7 +146,7 @@ export const MobileRobotSidebar: React.FC = () => {
             }`}
           >
             <Activity className="w-3 h-3" />
-            <span>Đa vật lý (Full)</span>
+            <span>{t.mobile.multiPhysicsFull}</span>
           </button>
           <button
             onClick={() => setPhysicsFidelity('kinematic')}
@@ -154,7 +157,7 @@ export const MobileRobotSidebar: React.FC = () => {
             }`}
           >
             <Layers className="w-3 h-3" />
-            <span>Động học (Lý tưởng)</span>
+            <span>{t.mobile.kinematicIdeal}</span>
           </button>
         </div>
 
@@ -166,11 +169,11 @@ export const MobileRobotSidebar: React.FC = () => {
               <span className="text-indigo-400 font-bold">{agvState.Vdc.toFixed(1)}V</span>
             </div>
             <div className="p-1.5 rounded bg-slate-900/90 border border-slate-800">
-              <span className="text-slate-500 block text-[9px]">Mô men Te</span>
+              <span className="text-slate-500 block text-[9px]">{t.mobile.motorTorqueTe}</span>
               <span className="text-emerald-400 font-bold">{((agvState.Te_L + agvState.Te_R) / 2).toFixed(1)}Nm</span>
             </div>
             <div className="p-1.5 rounded bg-slate-900/90 border border-slate-800">
-              <span className="text-slate-500 block text-[9px]">Độ trượt κ</span>
+              <span className="text-slate-500 block text-[9px]">{t.mobile.slipRatioKappa}</span>
               <span className={`font-bold ${Math.abs(agvState.slip_L) > 0.1 ? 'text-amber-400' : 'text-slate-300'}`}>
                 {(Math.abs(agvState.slip_L) * 100).toFixed(1)}%
               </span>
@@ -184,10 +187,10 @@ export const MobileRobotSidebar: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Move className="w-4 h-4 text-emerald-400" />
-            <span className="font-semibold text-slate-200">Điều khiển Trực tiếp (Teleop)</span>
+            <span className="font-semibold text-slate-200">{t.mobile.teleopHeading}</span>
           </div>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-            Phím W,A,S,D
+            {isVi ? "Phím W,A,S,D" : "W,A,S,D Keys"}
           </span>
         </div>
 
@@ -222,7 +225,7 @@ export const MobileRobotSidebar: React.FC = () => {
             <button
               onClick={() => setTargetVelocity(0, 0, 0)}
               className="w-12 h-10 bg-rose-600/30 hover:bg-rose-600 active:bg-rose-700 border border-rose-500/50 flex items-center justify-center font-bold text-rose-300 hover:text-white transition"
-              title="Dừng khẩn cấp (Space)"
+              title={isVi ? "Dừng khẩn cấp (Space)" : "Emergency Stop (Space)"}
             >
               STOP
             </button>
@@ -256,7 +259,7 @@ export const MobileRobotSidebar: React.FC = () => {
         {/* Speed Sliders */}
         <div className="space-y-2 pt-2 border-t border-slate-850">
           <div className="flex justify-between font-mono text-[11px]">
-            <span className="text-slate-400">Vận tốc tiến v:</span>
+            <span className="text-slate-400">{t.inspector.linearVel} (v):</span>
             <span className="text-emerald-400 font-bold">{velocity.v.toFixed(2)} m/s</span>
           </div>
           <input
@@ -270,7 +273,7 @@ export const MobileRobotSidebar: React.FC = () => {
           />
 
           <div className="flex justify-between font-mono text-[11px] pt-1">
-            <span className="text-slate-400">Vận tốc góc ω:</span>
+            <span className="text-slate-400">{t.inspector.angularVel} (ω):</span>
             <span className="text-sky-400 font-bold">{velocity.omega.toFixed(2)} rad/s</span>
           </div>
           <input
@@ -290,11 +293,11 @@ export const MobileRobotSidebar: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Navigation className="w-4 h-4 text-amber-400" />
-            <span className="font-semibold text-slate-200">Điều hướng Tự hành (A* & Pure Pursuit)</span>
+            <span className="font-semibold text-slate-200">{t.modals.autonomousAStar}</span>
           </div>
           {isNavigating && (
             <span className="flex items-center space-x-1 text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 animate-pulse">
-              <span>Đang bám đường</span>
+              <span>{isVi ? "Đang bám đường" : "Tracking Path"}</span>
             </span>
           )}
         </div>
@@ -302,7 +305,7 @@ export const MobileRobotSidebar: React.FC = () => {
         {/* Goal Coordinates */}
         <div className="grid grid-cols-2 gap-2 font-mono text-[11px]">
           <div className="p-2 rounded-lg bg-slate-900 border border-slate-800">
-            <span className="text-slate-500 block text-[10px]">Tọa độ Goal X (m)</span>
+            <span className="text-slate-500 block text-[10px]">{isVi ? "Tọa độ Goal X (m)" : "Goal X (m)"}</span>
             <input
               type="number"
               step={0.5}
@@ -312,7 +315,7 @@ export const MobileRobotSidebar: React.FC = () => {
             />
           </div>
           <div className="p-2 rounded-lg bg-slate-900 border border-slate-800">
-            <span className="text-slate-500 block text-[10px]">Tọa độ Goal Y (m)</span>
+            <span className="text-slate-500 block text-[10px]">{isVi ? "Tọa độ Goal Y (m)" : "Goal Y (m)"}</span>
             <input
               type="number"
               step={0.5}
@@ -329,7 +332,7 @@ export const MobileRobotSidebar: React.FC = () => {
             onClick={() => planPathToGoal()}
             className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold transition border border-slate-700 flex items-center justify-center space-x-1.5"
           >
-            <span>Tìm đường A*</span>
+            <span>{isVi ? "Tìm đường A*" : "Find Path (A*)"}</span>
           </button>
 
           {!isNavigating ? (
@@ -338,7 +341,7 @@ export const MobileRobotSidebar: React.FC = () => {
               className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition shadow-md shadow-emerald-600/30 flex items-center justify-center space-x-1.5"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
-              <span>Thực thi</span>
+              <span>{isVi ? "Thực thi" : "Execute"}</span>
             </button>
           ) : (
             <button
@@ -346,15 +349,15 @@ export const MobileRobotSidebar: React.FC = () => {
               className="px-3 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold transition shadow-md shadow-rose-600/30 flex items-center justify-center space-x-1.5"
             >
               <Square className="w-3.5 h-3.5 fill-current" />
-              <span>Dừng lại</span>
+              <span>{isVi ? "Dừng lại" : "Stop"}</span>
             </button>
           )}
         </div>
 
         {plannedPath.length > 0 && (
           <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800/80 font-mono text-[11px] text-slate-400 flex justify-between items-center">
-            <span>Tổng Waypoints: <strong className="text-amber-400">{plannedPath.length} điểm</strong></span>
-            <span>Lệch làn: <strong className="text-sky-400">{(navCrossTrackError * 100).toFixed(1)} cm</strong></span>
+            <span>{isVi ? "Tổng Waypoints:" : "Total Waypoints:"} <strong className="text-amber-400">{plannedPath.length} {isVi ? "điểm" : "pts"}</strong></span>
+            <span>{isVi ? "Lệch làn:" : "Cross-Track:"} <strong className="text-sky-400">{(navCrossTrackError * 100).toFixed(1)} cm</strong></span>
           </div>
         )}
       </div>
@@ -364,7 +367,7 @@ export const MobileRobotSidebar: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <MapPin className="w-4 h-4 text-emerald-400" />
-            <span className="font-semibold text-slate-200">Hành Trình Pose (Multi-Pose Mission)</span>
+            <span className="font-semibold text-slate-200">{t.mobile.multiPoseMission}</span>
           </div>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">
             {poseWaypoints.length} Poses
@@ -376,7 +379,7 @@ export const MobileRobotSidebar: React.FC = () => {
           <button
             onClick={() => openAddPoseModal()}
             className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-[11px] flex items-center justify-center space-x-1.5 transition shadow"
-            title="Thêm Pose mới với Vị trí X/Y, Hướng theta và Thời gian dự kiến T"
+            title={t.mobile.addPose}
           >
             <Plus className="w-3.5 h-3.5" />
             <span>+ Add Pose</span>
@@ -385,9 +388,9 @@ export const MobileRobotSidebar: React.FC = () => {
           <button
             onClick={() => addPoseFromCurrent()}
             className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white border border-slate-800 text-[11px] flex items-center justify-center space-x-1 transition"
-            title="Lấy ngay vị trí và hướng hiện tại của xe thêm vào danh sách"
+            title={t.mobile.getCurrentPose}
           >
-            <span>Lấy Pose hiện tại</span>
+            <span>{t.mobile.getCurrentPose}</span>
           </button>
         </div>
 
@@ -406,15 +409,15 @@ export const MobileRobotSidebar: React.FC = () => {
               <Play className="w-3.5 h-3.5 fill-current" />
               <span>
                 {isMissionRunning
-                  ? `Đang chạy Pose ${currentMissionIndex + 1}/${poseWaypoints.length}`
-                  : 'Chạy toàn bộ lộ trình'}
+                  ? (isVi ? `Đang chạy Pose ${currentMissionIndex + 1}/${poseWaypoints.length}` : `Running Pose ${currentMissionIndex + 1}/${poseWaypoints.length}`)
+                  : (isVi ? 'Chạy toàn bộ lộ trình' : 'Run Entire Mission')}
               </span>
             </button>
 
             <button
               onClick={() => clearPoseWaypoints()}
               className="p-1.5 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/20 transition"
-              title="Xóa toàn bộ danh sách Pose"
+              title={t.mobile.clearAllPoses}
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -461,14 +464,14 @@ export const MobileRobotSidebar: React.FC = () => {
                   <button
                     onClick={() => executeMissionPose(wp.id)}
                     className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-[10px] transition font-sans font-medium"
-                    title="Đi tới Pose này"
+                    title={t.mobile.goToPose}
                   >
-                    Đi tới
+                    {t.mobile.goToPose}
                   </button>
                   <button
                     onClick={() => removePoseWaypoint(wp.id)}
                     className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition"
-                    title="Xóa Pose này"
+                    title={isVi ? "Xóa Pose này" : "Delete this pose"}
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
@@ -484,7 +487,7 @@ export const MobileRobotSidebar: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Box className="w-4 h-4 text-yellow-400" />
-            <span className="font-semibold text-slate-200">Quản lý Vật cản Nhà xưởng</span>
+            <span className="font-semibold text-slate-200">{t.mobile.envManager}</span>
           </div>
         </div>
 
@@ -494,14 +497,14 @@ export const MobileRobotSidebar: React.FC = () => {
             className="p-2 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 font-medium flex items-center justify-center space-x-1.5 transition"
           >
             <Plus className="w-3.5 h-3.5 text-yellow-400" />
-            <span>+ Cột trụ tròn</span>
+            <span>{isVi ? "+ Cột trụ tròn" : "+ Cylinder Column"}</span>
           </button>
           <button
             onClick={handleAddBoxObstacle}
             className="p-2 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 font-medium flex items-center justify-center space-x-1.5 transition"
           >
             <Plus className="w-3.5 h-3.5 text-amber-500" />
-            <span>+ Kiện Pallet</span>
+            <span>{isVi ? "+ Kiện Pallet" : "+ Pallet Cargo"}</span>
           </button>
         </div>
 
@@ -510,7 +513,7 @@ export const MobileRobotSidebar: React.FC = () => {
             <button
               onClick={resetPose}
               className="px-2 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-900 border border-slate-800 flex items-center space-x-1 transition text-[11px]"
-              title="Đặt lại vị trí xuất phát"
+              title={isVi ? "Đặt lại vị trí xuất phát" : "Reset AGV Pose"}
             >
               <RotateCcw className="w-3 h-3 text-emerald-400" />
               <span>Reset Xe</span>
@@ -518,26 +521,26 @@ export const MobileRobotSidebar: React.FC = () => {
             <button
               onClick={clearTrace}
               className="px-2 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-slate-800 transition text-[11px]"
-              title="Xóa vệt vết bánh xe"
+              title={t.mobile.clearTrace}
             >
-              Xóa vết
+              {t.mobile.clearTrace}
             </button>
           </div>
           <div className="flex items-center space-x-1.5">
             <button
               onClick={resetObstacles}
               className="px-2 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-slate-800 transition text-[11px]"
-              title="Khôi phục vật cản mặc định"
+              title={isVi ? "Khôi phục vật cản mặc định" : "Restore default obstacles"}
             >
-              Mặc định
+              {isVi ? "Mặc định" : "Default"}
             </button>
             <button
               onClick={clearObstacles}
               className="px-2 py-1.5 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 flex items-center space-x-1 transition text-[11px]"
-              title="Xóa tất cả vật cản trừ tường biên"
+              title={isVi ? "Xóa tất cả vật cản trừ tường biên" : "Clear all obstacles except boundary walls"}
             >
               <Trash2 className="w-3 h-3" />
-              <span>Xóa</span>
+              <span>{isVi ? "Xóa" : "Clear"}</span>
             </button>
           </div>
         </div>

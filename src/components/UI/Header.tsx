@@ -1,5 +1,6 @@
 import React from 'react';
 import { useRobotStore } from '../../store/robotStore';
+import { useTranslation } from '../../i18n';
 import { AVAILABLE_ROBOTS } from '../../services/robotLoader';
 import {
   Bot,
@@ -33,6 +34,8 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleIKJacobian,
   isIKJacobianOpen,
 }) => {
+  const { language } = useTranslation();
+  const isVi = language === 'vi';
   const {
     currentRobotId,
     loadRobot,
@@ -114,7 +117,7 @@ export const Header: React.FC<HeaderProps> = ({
               ? 'bg-white text-slate-900 border-slate-300 shadow-md font-semibold'
               : 'bg-slate-800/90 text-slate-300 border-slate-700 hover:text-white'
           }`}
-          title={isWhitePaper ? 'Đang ở chế độ Nền trắng (Academic Paper). Nhấn để chuyển nền tối.' : 'Chuyển sang Nền trắng tinh khiết để chụp hình chèn vào sách/bài giảng'}
+          title={isWhitePaper ? (isVi ? 'Đang ở chế độ Nền trắng (Academic Paper). Nhấn để chuyển nền tối.' : 'Academic White Paper theme active. Click to switch to dark mode.') : (isVi ? 'Chuyển sang Nền trắng tinh khiết để chụp hình chèn vào sách/bài giảng' : 'Switch to pure white paper theme for paper/book figure capture')}
         >
           {isWhitePaper ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-sky-400" />}
           <span className="hidden sm:inline">{isWhitePaper ? 'Paper White' : 'Dark Mode'}</span>
@@ -124,7 +127,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           onClick={() => triggerCapture(isWhitePaper ? 'white' : 'transparent')}
           className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600/30 transition"
-          title="Chụp ảnh 2X độ phân giải cao tải về máy ngay lập tức"
+          title={isVi ? "Chụp ảnh 2X độ phân giải cao tải về máy ngay lập tức" : "Instant high-resolution 2X PNG snapshot"}
         >
           <Camera className="w-4 h-4 text-emerald-400" />
           <span className="hidden md:inline">Snap PNG</span>

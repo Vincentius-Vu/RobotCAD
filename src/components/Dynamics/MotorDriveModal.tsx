@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useRobotStore } from '../../store/robotStore';
+import { useTranslation } from '../../i18n';
 import { MotorDriveEngine } from '../../physics/motors/MotorDriveEngine';
 import { PowerConverterEngine } from '../../physics/converters/PowerConverterEngine';
 import { MotorDriveParameters, MotorType } from '../../types/motor';
@@ -39,6 +40,8 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
     updateDCBusSettings,
     updateInverterSettings,
   } = useRobotStore();
+  const { language } = useTranslation();
+  const isVi = language === 'vi';
 
   const [selectedJointIdx, setSelectedJointIdx] = useState<number>(initialJointIndex);
   const [modalTab, setModalTab] = useState<'motor' | 'converter'>('motor');
@@ -66,36 +69,37 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
     }
   };
 
+  // isVi already declared
   const motorTypeLabels: Record<MotorType, { title: string; badge: string; color: string; desc: string }> = {
     ideal: {
-      title: 'Lý tưởng (Direct Drive)',
+      title: isVi ? 'Lý tưởng (Direct Drive)' : 'Ideal Actuator (Direct Drive)',
       badge: 'IDEAL',
       color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-      desc: 'Mô-men ngõ ra tức thời, không trễ dòng điện, bỏ qua suy hao nhiệt và bão hòa điện áp.',
+      desc: isVi ? 'Mô-men ngõ ra tức thời, không trễ dòng điện, bỏ qua suy hao nhiệt và bão hòa điện áp.' : 'Instantaneous torque response, zero electrical lag, negligible thermal loss and ideal voltage supply.',
     },
     dc: {
-      title: 'DC Chổi Than (Brushed DC)',
+      title: isVi ? 'DC Chổi Than (Brushed DC)' : 'Brushed DC Coreless Servo',
       badge: 'DC SERVO',
       color: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-      desc: 'Rô-to không rãnh (coreless), phương trình điện tích phân La·di/dt = v - R·i - e_b, s.đ.đ phản kháng Ke·ωm.',
+      desc: isVi ? 'Rô-to không rãnh (coreless), phương trình điện tích phân La·di/dt = v - R·i - e_b, s.đ.đ phản kháng Ke·ωm.' : 'Armature electrical dynamics: L_a · di/dt = v - R_a · i - e_b with back-EMF e_b = K_e · ω_m.',
     },
     bldc: {
-      title: 'BLDC Không Chổi Than (Trapezoidal)',
+      title: isVi ? 'BLDC Không Chổi Than (Trapezoidal)' : 'Brushless DC (Trapezoidal 6-Step)',
       badge: 'BLDC 6-STEP',
       color: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
-      desc: 'Chuyển mạch điện tử biến tần 6 bước với gợn sóng mô-men (torque ripple) chu kỳ 60° điện.',
+      desc: isVi ? 'Chuyển mạch điện tử biến tần 6 bước với gợn sóng mô-men (torque ripple) chu kỳ 60° điện.' : 'Electronic commutation 6-step trapezoidal switching with 60° electrical torque ripple.',
     },
     pmsm: {
-      title: 'PMSM Đồng Bộ Nam Châm (FOC Vector)',
+      title: isVi ? 'PMSM Đồng Bộ Nam Châm (FOC Vector)' : 'Permanent Magnet Synchronous Motor (PMSM FOC)',
       badge: 'PMSM FOC',
       color: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-      desc: 'Chuẩn công nghiệp & Cobot: Điều khiển vector tựa từ thông FOC (id=0), triệt tiêu rung giật, hỗ trợ suy giảm từ thông.',
+      desc: isVi ? 'Chuẩn công nghiệp & Cobot: Điều khiển vector tựa từ thông FOC (id=0), triệt tiêu rung giật, hỗ trợ suy giảm từ thông.' : 'Industrial & Cobot benchmark: Field-Oriented Vector Control (id = 0), ripple suppression, flux-weakening support.',
     },
     im: {
-      title: 'IM Động Cơ Dị Bộ (Asynchronous RFOC)',
+      title: isVi ? 'IM Động Cơ Dị Bộ (Asynchronous RFOC)' : 'Induction Motor (Asynchronous RFOC)',
       badge: 'IM AC',
       color: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
-      desc: 'Động cơ cảm ứng 3 pha điều khiển RFOC: Quán tính lớn, trượt rotor (slip), động học tích lũy từ thông rotor dψr/dt.',
+      desc: isVi ? 'Động cơ cảm ứng 3 pha điều khiển RFOC: Quán tính lớn, trượt rotor (slip), động học tích lũy từ thông rotor dψr/dt.' : '3-Phase induction motor with Rotor Field-Oriented Control (RFOC), rotor slip dynamics, and dψ_r/dt flux state integration.',
     },
   };
 
@@ -119,14 +123,14 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <h2 className="text-base font-bold text-white tracking-wide">
-                  Hệ Thống Động Cơ & Biến Tần Công Suất (Actuators & Inverter Drives)
+                  {language === 'vi' ? 'Hệ Thống Động Cơ & Biến Tần Công Suất (Actuators & Inverter Drives)' : 'Actuator Drives & Power Inverter Electronics'}
                 </h2>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 font-semibold">
                   Multi-Physics 500 Hz
                 </span>
               </div>
               <p className="text-xs text-slate-400 font-mono mt-0.5">
-                Mô hình liên tầng: Điện tử công suất (SVPWM Inverter) → Động cơ (DC/BLDC/PMSM/IM) → Hộp số → Động lực học cánh tay
+                {language === 'vi' ? 'Mô hình liên tầng: Điện tử công suất (SVPWM Inverter) → Động cơ (DC/BLDC/PMSM/IM) → Hộp số → Động lực học cánh tay' : 'Multi-physics cascade: Power Electronics (SVPWM) → Actuator (DC/BLDC/PMSM/IM) → Gearbox → Link Dynamics'}
               </p>
             </div>
           </div>
@@ -150,7 +154,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
               }`}
             >
               <Cpu className="w-4 h-4 text-rose-400" />
-              <span>1. Động Cơ & Hộp Số (Motors & Transmission)</span>
+              <span>{isVi ? '1. Động Cơ & Hộp Số (Motors & Transmission)' : '1. Motors & Gearbox'}</span>
             </button>
             <button
               onClick={() => setModalTab('converter')}
@@ -161,7 +165,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
               }`}
             >
               <Zap className="w-4 h-4 text-amber-400" />
-              <span>2. Biến Tần & Bus DC (Inverter & Power Electronics)</span>
+              <span>{isVi ? '2. Biến Tần & Bus DC (Inverter & Power Electronics)' : '2. Inverter & DC Bus'}</span>
             </button>
           </div>
         </div>
@@ -171,7 +175,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
           <div className="px-6 py-2.5 bg-slate-950/40 border-b border-slate-800 flex items-center justify-between text-xs">
             <div className="flex items-center space-x-2">
               <Sparkles className="w-4 h-4 text-amber-400" />
-              <span className="text-slate-300 font-mono font-medium">Nạp Preset cho TẤT CẢ các khớp:</span>
+              <span className="text-slate-300 font-mono font-medium">{isVi ? 'Nạp Preset cho TẤT CẢ các khớp:' : 'Apply Preset to ALL Joints:'}</span>
             </div>
             <div className="flex items-center space-x-1.5 overflow-x-auto">
               {Object.values(MotorDriveEngine.MOTOR_PRESETS).map((preset) => (
@@ -204,7 +208,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                     : 'bg-slate-800/80 text-slate-400 border-slate-750 hover:bg-slate-800 hover:text-slate-200'
                 }`}
               >
-                <span>Khớp J{j.jointIndex}</span>
+                <span>{isVi ? 'Khớp J' : 'Joint J'}{j.jointIndex}</span>
                 <span
                   className={`text-[9px] px-1.5 py-0.2 rounded font-semibold uppercase ${
                     isSelected ? 'bg-white/20 text-white' : 'bg-slate-900 text-slate-400'
@@ -225,7 +229,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
               {/* Motor Type Selector Grid */}
               <div className="space-y-2">
                 <label className="text-xs font-mono font-bold text-slate-300 block">
-                  Chọn Kiến Trúc Động Cơ Cho Khớp J{currentJoint.jointIndex} ({currentJoint.name}):
+                  {isVi ? 'Chọn Kiến Trúc Động Cơ Cho Khớp J' : 'Select Motor Architecture for Joint J'}{currentJoint.jointIndex} ({currentJoint.name}):
                 </label>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-2.5">
                   {(['ideal', 'dc', 'bldc', 'pmsm', 'im'] as MotorType[]).map((type) => {
@@ -272,7 +276,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
 
               {/* Quick Presets */}
               <div className="flex items-center justify-between p-2.5 bg-slate-950/60 rounded-xl border border-slate-800 text-xs">
-                <span className="text-slate-400 font-mono">Preset chuẩn công nghiệp cho J{currentJoint.jointIndex}:</span>
+                <span className="text-slate-400 font-mono">{isVi ? 'Preset chuẩn công nghiệp cho J' : 'Industrial presets for J'}{currentJoint.jointIndex}:</span>
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => handleApplyPresetToCurrent('robodrive_pmsm_ilm70')}
@@ -308,13 +312,13 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                   <div className="p-4 bg-slate-950/80 rounded-xl border border-slate-800 space-y-3">
                     <span className="text-xs font-mono font-bold text-slate-200 flex items-center space-x-1.5 border-b border-slate-800 pb-2">
                       <Layers className="w-4 h-4 text-amber-400" />
-                      <span>Cơ khí & Hộp số Truyền động (Gearbox)</span>
+                      <span>{isVi ? 'Cơ khí & Hộp số Truyền động (Gearbox)' : 'Mechanical Transmission & Gearbox'}</span>
                     </span>
 
                     <div className="space-y-3 text-xs font-mono">
                       <div>
                         <div className="flex justify-between mb-1">
-                          <span className="text-slate-400">Tỷ số truyền hộp số (N : 1):</span>
+                          <span className="text-slate-400">{isVi ? 'Tỷ số truyền hộp số (N : 1):' : 'Gear Reduction Ratio (N : 1):'}</span>
                           <span className="text-amber-300 font-bold">{motorParams.gearRatio} : 1</span>
                         </div>
                         <input
@@ -330,7 +334,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
 
                       <div>
                         <div className="flex justify-between mb-1">
-                          <span className="text-slate-400">Hiệu suất hộp số (η):</span>
+                          <span className="text-slate-400">{isVi ? 'Hiệu suất hộp số (η):' : 'Gearbox Efficiency (η):'}</span>
                           <span className="text-sky-300 font-bold">{Math.round(motorParams.gearEfficiency * 100)}%</span>
                         </div>
                         <input
@@ -346,7 +350,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
 
                       <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 space-y-2">
                         <div className="flex justify-between">
-                          <span className="text-slate-400">Quán tính Rotor J_m (kg·m²):</span>
+                          <span className="text-slate-400">{isVi ? 'Quán tính Rotor J_m (kg·m²):' : 'Rotor Inertia J_m (kg·m²):'}</span>
                           <input
                             type="number"
                             step="0.00005"
@@ -356,7 +360,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                           />
                         </div>
                         <div className="pt-1.5 border-t border-slate-800 flex items-center justify-between text-[11px]">
-                          <span className="text-emerald-400 font-bold">Quán tính phản xạ J_refl = N²·J_m:</span>
+                          <span className="text-emerald-400 font-bold">{isVi ? 'Quán tính phản xạ J_refl = N²·J_m:' : 'Reflected Inertia J_refl = N²·J_m:'}</span>
                           <span className="text-emerald-300 font-bold">{reflectedInertia.toFixed(4)} kg·m²</span>
                         </div>
                       </div>
@@ -369,12 +373,12 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                   <div className="p-4 bg-slate-950/80 rounded-xl border border-slate-800 space-y-3">
                     <span className="text-xs font-mono font-bold text-slate-200 flex items-center space-x-1.5 border-b border-slate-800 pb-2">
                       <Zap className="w-4 h-4 text-rose-400" />
-                      <span>Thông số Cuộn Dây & Động Cơ</span>
+                      <span>{isVi ? 'Thông số Cuộn Dây & Động Cơ' : 'Armature & Electrical Winding Parameters'}</span>
                     </span>
 
                     <div className="grid grid-cols-2 gap-3 text-xs font-mono">
                       <div>
-                        <span className="text-slate-400 block mb-0.5">Dòng cực đại I_peak (A):</span>
+                        <span className="text-slate-400 block mb-0.5">{isVi ? 'Dòng cực đại I_peak (A):' : 'Peak Current Limit I_peak (A):'}</span>
                         <input
                           type="number"
                           value={motorParams.peakCurrent}
@@ -383,7 +387,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                         />
                       </div>
                       <div>
-                        <span className="text-slate-400 block mb-0.5">Hằng số Kt (N·m/A):</span>
+                        <span className="text-slate-400 block mb-0.5">{isVi ? 'Hằng số Kt (N·m/A):' : 'Torque Constant Kt (N·m/A):'}</span>
                         <input
                           type="number"
                           step="0.01"
@@ -393,7 +397,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                         />
                       </div>
                       <div>
-                        <span className="text-slate-400 block mb-0.5">Hằng số s.đ.đ Ke (V/rad/s):</span>
+                        <span className="text-slate-400 block mb-0.5">{isVi ? 'Hằng số s.đ.đ Ke (V/rad/s):' : 'Back-EMF Constant Ke (V/rad/s):'}</span>
                         <input
                           type="number"
                           step="0.01"
@@ -403,7 +407,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                         />
                       </div>
                       <div>
-                        <span className="text-slate-400 block mb-0.5">Điện trở cuộn dây Ra (Ω):</span>
+                        <span className="text-slate-400 block mb-0.5">{isVi ? 'Điện trở cuộn dây Ra (Ω):' : 'Winding Resistance Ra (Ω):'}</span>
                         <input
                           type="number"
                           step="0.05"
@@ -413,7 +417,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                         />
                       </div>
                       <div>
-                        <span className="text-slate-400 block mb-0.5">Điện cảm La (mH):</span>
+                        <span className="text-slate-400 block mb-0.5">{isVi ? 'Điện cảm La (mH):' : 'Winding Inductance La (mH):'}</span>
                         <input
                           type="number"
                           step="0.05"
@@ -425,7 +429,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                         />
                       </div>
                       <div>
-                        <span className="text-slate-400 block mb-0.5">Số đôi cực từ (p):</span>
+                        <span className="text-slate-400 block mb-0.5">{isVi ? 'Số đôi cực từ (p):' : 'Pole Pairs (p):'}</span>
                         <input
                           type="number"
                           value={motorParams.polePairs}
@@ -449,24 +453,24 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                   <div className="flex items-center space-x-2">
                     <Radio className="w-4 h-4 text-amber-400 animate-pulse" />
                     <span className="text-xs font-mono font-bold text-amber-300">
-                      Hệ Thống Bus DC Chung & Mạch Xả Hãm Tái Sinh (Shared DC Bus & Braking Chopper)
+                      {isVi ? 'Hệ Thống Bus DC Chung & Mạch Xả Hãm Tái Sinh (Shared DC Bus & Braking Chopper)' : 'Shared DC-Bus Power Network & Braking Chopper'}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
                     {dcBusState?.isBrakingChopperActive ? (
                       <span className="px-2 py-0.5 rounded bg-rose-500 text-white text-[10px] font-mono font-bold animate-pulse">
-                        ĐANG XẢ HÃM (BRAKING CHOPPER ON)
+                        {isVi ? 'ĐANG XẢ HÃM (BRAKING CHOPPER ON)' : 'BRAKING CHOPPER ON'}
                       </span>
                     ) : (
                       <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px] font-mono">
-                        Chopper Sẵn Sàng (Standby)
+                        {isVi ? 'Chopper Sẵn Sàng (Standby)' : 'Chopper Standby'}
                       </span>
                     )}
 
                     {dcBusState?.isOvervoltageTripped && (
                       <span className="px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-mono font-bold animate-bounce flex items-center space-x-1">
                         <ShieldAlert className="w-3 h-3" />
-                        <span>QUÁ ÁP BUS TRIP!</span>
+                        <span>{isVi ? 'QUÁ ÁP BUS TRIP!' : 'OVERVOLTAGE TRIP!'}</span>
                       </span>
                     )}
                   </div>
@@ -477,8 +481,8 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                   {/* Bus Voltage */}
                   <div className="p-3 bg-slate-900 rounded-lg border border-slate-800">
                     <div className="text-slate-400 text-[10px] flex justify-between">
-                      <span>Điện áp Bus V_dc(t):</span>
-                      <span className="text-amber-400">Danh định: {dcBusSettings.nominalVoltage}V</span>
+                      <span>{isVi ? 'Điện áp Bus V_dc(t):' : 'DC Bus Voltage V_dc(t):'}</span>
+                      <span className="text-amber-400">{isVi ? 'Danh định:' : 'Nominal:'} {dcBusSettings.nominalVoltage}V</span>
                     </div>
                     <div className="text-lg font-bold text-amber-300 mt-1">
                       {(dcBusState?.voltageV || dcBusSettings.nominalVoltage).toFixed(2)}{' '}
@@ -507,7 +511,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                   {/* Net Power & Regen Power */}
                   <div className="p-3 bg-slate-900 rounded-lg border border-slate-800">
                     <div className="text-slate-400 text-[10px] flex justify-between">
-                      <span>Công suất tổng 6 trục:</span>
+                      <span>{isVi ? 'Công suất tổng 6 trục:' : 'Net 6-Axis Power:'}</span>
                       <span className="text-sky-400">P_net</span>
                     </div>
                     <div className="text-lg font-bold text-sky-400 mt-1">
@@ -515,14 +519,14 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                       <span className="text-xs text-slate-400">W</span>
                     </div>
                     <div className="text-[10px] text-slate-400 mt-1">
-                      Tái sinh: {(dcBusState?.regenerativePowerW || 0).toFixed(1)} W
+                      {isVi ? 'Tái sinh:' : 'Regen:'} {(dcBusState?.regenerativePowerW || 0).toFixed(1)} W
                     </div>
                   </div>
 
                   {/* Braking Resistor Power */}
                   <div className="p-3 bg-slate-900 rounded-lg border border-slate-800">
                     <div className="text-slate-400 text-[10px] flex justify-between">
-                      <span>Công suất xả nhiệt:</span>
+                      <span>{isVi ? 'Công suất xả nhiệt:' : 'Braking Thermal Power:'}</span>
                       <Flame className="w-3 h-3 text-rose-400" />
                     </div>
                     <div className="text-lg font-bold text-rose-400 mt-1">
@@ -530,14 +534,14 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                       <span className="text-xs text-slate-400">W</span>
                     </div>
                     <div className="text-[10px] text-slate-400 mt-1">
-                      Dòng xả: {(dcBusState?.brakingCurrentA || 0).toFixed(1)} A
+                      {isVi ? 'Dòng xả:' : 'Brake Current:'} {(dcBusState?.brakingCurrentA || 0).toFixed(1)} A
                     </div>
                   </div>
 
                   {/* Supply Current */}
                   <div className="p-3 bg-slate-900 rounded-lg border border-slate-800">
                     <div className="text-slate-400 text-[10px] flex justify-between">
-                      <span>Dòng nguồn cấp:</span>
+                      <span>{isVi ? 'Dòng nguồn cấp:' : 'Power Supply Current:'}</span>
                       <span className="text-emerald-400">I_supply</span>
                     </div>
                     <div className="text-lg font-bold text-emerald-400 mt-1">
@@ -545,7 +549,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                       <span className="text-xs text-slate-400">A</span>
                     </div>
                     <div className="text-[10px] text-slate-400 mt-1">
-                      Giới hạn: {dcBusSettings.powerSupplyCurrentLimit} A
+                      {isVi ? 'Giới hạn:' : 'Limit:'} {dcBusSettings.powerSupplyCurrentLimit} A
                     </div>
                   </div>
                 </div>
@@ -556,12 +560,12 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                 {/* DC Bus Configuration (6 cols) */}
                 <div className="md:col-span-6 space-y-3 p-4 bg-slate-950/80 rounded-xl border border-slate-800 text-xs font-mono">
                   <span className="font-bold text-slate-200 block border-b border-slate-800 pb-2">
-                    Cấu Hình Tụ Điện Bus & Mạch Hãm (DC Link)
+                    {isVi ? 'Cấu Hình Tụ Điện Bus & Mạch Hãm (DC Link)' : 'DC-Link Bus Capacitor & Braking Chopper Configuration'}
                   </span>
 
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-400">Dung lượng tụ lọc C_bus:</span>
+                      <span className="text-slate-400">{isVi ? 'Dung lượng tụ lọc C_bus:' : 'Bus Capacitance C_bus:'}</span>
                       <div className="flex items-center space-x-1">
                         <input
                           type="number"
@@ -577,7 +581,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                     </div>
 
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-400">Điện trở xả hãm R_brake:</span>
+                      <span className="text-slate-400">{isVi ? 'Điện trở xả hãm R_brake:' : 'Braking Resistor R_brake:'}</span>
                       <div className="flex items-center space-x-1">
                         <input
                           type="number"
@@ -593,7 +597,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                     </div>
 
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-400">Ngưỡng kích hoạt xả hãm:</span>
+                      <span className="text-slate-400">{isVi ? 'Ngưỡng kích hoạt xả hãm:' : 'Braking Activation Threshold:'}</span>
                       <div className="flex items-center space-x-1">
                         <input
                           type="number"
@@ -609,7 +613,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                     </div>
 
                     <div className="flex justify-between items-center pt-2 border-t border-slate-800">
-                      <span className="text-slate-300 font-semibold">Bảo vệ hãm tái sinh (Chopper):</span>
+                      <span className="text-slate-300 font-semibold">{isVi ? 'Bảo vệ hãm tái sinh (Chopper):' : 'Braking Chopper Protection:'}</span>
                       <button
                         onClick={() =>
                           updateDCBusSettings({ enableBrakingChopper: !dcBusSettings.enableBrakingChopper })
@@ -620,7 +624,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                             : 'bg-rose-600/30 text-rose-300 border-rose-500/50'
                         }`}
                       >
-                        {dcBusSettings.enableBrakingChopper ? 'KÍCH HOẠT (Bật)' : 'TẮT (Gây Quá Áp)'}
+                        {dcBusSettings.enableBrakingChopper ? (isVi ? 'KÍCH HOẠT (Bật)' : 'ENABLED (Active)') : (isVi ? 'TẮT (Gây Quá Áp)' : 'DISABLED (Trip Risk)')}
                       </button>
                     </div>
                   </div>
@@ -629,25 +633,25 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                 {/* Inverter Switching & Thermal Configuration (6 cols) */}
                 <div className="md:col-span-6 space-y-3 p-4 bg-slate-950/80 rounded-xl border border-slate-800 text-xs font-mono">
                   <span className="font-bold text-slate-200 block border-b border-slate-800 pb-2">
-                    Bộ Điều Chế Biến Tần & Thời Gian Chết (PWM Inverter)
+                    {isVi ? 'Bộ Điều Chế Biến Tần & Thời Gian Chết (PWM Inverter)' : 'PWM Inverter Modulation & Dead-Time'}
                   </span>
 
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-400">Thuật toán điều chế PWM:</span>
+                      <span className="text-slate-400">{isVi ? 'Thuật toán điều chế PWM:' : 'PWM Modulation Scheme:'}</span>
                       <select
                         value={inverterSettings.modulationScheme}
                         onChange={(e) => updateInverterSettings({ modulationScheme: e.target.value as any })}
                         className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-slate-200"
                       >
-                        <option value="svpwm">SVPWM (Vector không gian, +15.5% Vmax)</option>
-                        <option value="spwm">SPWM (Sin truyền thống)</option>
-                        <option value="third-harmonic-pwm">Sin + Hài bậc 3 (THPWM)</option>
+                        <option value="svpwm">{isVi ? 'SVPWM (Vector không gian, +15.5% Vmax)' : 'SVPWM (Space Vector, +15.5% Vmax)'}</option>
+                        <option value="spwm">{isVi ? 'SPWM (Sin truyền thống)' : 'SPWM (Sinusoidal PWM)'}</option>
+                        <option value="third-harmonic-pwm">{isVi ? 'Sin + Hài bậc 3 (THPWM)' : 'Third-Harmonic PWM (THPWM)'}</option>
                       </select>
                     </div>
 
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-400">Tần số đóng cắt f_sw:</span>
+                      <span className="text-slate-400">{isVi ? 'Tần số đóng cắt f_sw:' : 'Switching Frequency f_sw:'}</span>
                       <div className="flex items-center space-x-1">
                         <select
                           value={inverterSettings.switchingFrequencyHz}
@@ -665,7 +669,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                     </div>
 
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-400">Thời gian chết t_dead:</span>
+                      <span className="text-slate-400">{isVi ? 'Thời gian chết t_dead:' : 'Inverter Dead-Time t_dead:'}</span>
                       <div className="flex items-center space-x-1">
                         <input
                           type="number"
@@ -686,7 +690,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                       <div className="pt-2 border-t border-slate-800 flex justify-between items-center text-[11px]">
                         <span className="text-slate-400 flex items-center space-x-1">
                           <Thermometer className="w-3.5 h-3.5 text-amber-400" />
-                          <span>Nhiệt độ mối nối bán dẫn Tj (J{currentJoint.jointIndex}):</span>
+                          <span>{isVi ? 'Nhiệt độ mối nối bán dẫn Tj (J' : 'Junction Temperature Tj (J'}{currentJoint.jointIndex}):</span>
                         </span>
                         <span className="text-amber-300 font-bold">
                           {currentAxisInverter.junctionTemperatureC.toFixed(1)} °C
@@ -702,10 +706,10 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                   <span className="text-xs font-mono font-bold text-sky-400 flex items-center space-x-2">
                     <Activity className="w-4 h-4 text-sky-400" />
-                    <span>Dao Động Ký Kính Hiển Vi Xung PWM (Micro-Scope PWM Zoom - 2 Chu Kỳ Đóng Cắt)</span>
+                    <span>{isVi ? 'Dao Động Ký Kính Hiển Vi Xung PWM (Micro-Scope PWM Zoom - 2 Chu Kỳ Đóng Cắt)' : 'Micro-Scope PWM Zoom Oscilloscope (2 Switching Cycles)'}</span>
                   </span>
                   <span className="text-[10px] font-mono text-slate-400">
-                    Hệ số điều chế m = {currentAxisInverter?.modulationIndex.toFixed(2) || '0.80'} | Sóng mang: {inverterSettings.switchingFrequencyHz / 1000} kHz
+                    {isVi ? 'Hệ số điều chế m =' : 'Modulation Index m ='} {currentAxisInverter?.modulationIndex.toFixed(2) || '0.80'} | {isVi ? 'Sóng mang:' : 'Carrier:'} {inverterSettings.switchingFrequencyHz / 1000} kHz
                   </span>
                 </div>
 
@@ -757,13 +761,13 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
 
                     {/* Labels */}
                     <text x="10" y="15" fill="#f59e0b" fontSize="9" fontFamily="monospace">
-                      Sóng điều chế V_ref (SVPWM)
+                      {isVi ? 'Sóng điều chế V_ref (SVPWM)' : 'Modulating Wave V_ref (SVPWM)'}
                     </text>
                     <text x="210" y="15" fill="#06b6d4" fontSize="9" fontFamily="monospace">
-                      Sóng mang tam giác Carrier (16 kHz)
+                      {isVi ? 'Sóng mang tam giác Carrier (16 kHz)' : 'Triangular Carrier Wave (16 kHz)'}
                     </text>
                     <text x="10" y="105" fill="#10b981" fontSize="9" fontFamily="monospace">
-                      Xung đóng mở van Gate PWM S_A(t)
+                      {isVi ? 'Xung đóng mở van Gate PWM S_A(t)' : 'Gate Switching Pulses S_A(t)'}
                     </text>
                   </svg>
                 </div>
@@ -776,17 +780,17 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
               <span className="text-xs font-mono font-bold text-rose-300 flex items-center space-x-2">
                 <Activity className="w-4 h-4 text-rose-400 animate-pulse" />
-                <span>Giám Sát Cơ Điện Trực Tuyến - Khớp J{currentJoint.jointIndex} ({currentJoint.name})</span>
+                <span>{isVi ? 'Giám Sát Cơ Điện Trực Tuyến - Khớp J' : 'Online Electromechanical Telemetry - Joint J'}{currentJoint.jointIndex} ({currentJoint.name})</span>
               </span>
               <div className="flex items-center space-x-2">
                 {motorState?.isCurrentSaturated && (
                   <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500 text-[10px] font-mono font-bold animate-bounce">
-                    BÃO HÒA DÒNG ĐIỆN (I_PEAK)
+                    {isVi ? 'BÃO HÒA DÒNG ĐIỆN (I_PEAK)' : 'CURRENT SATURATED (I_PEAK)'}
                   </span>
                 )}
                 {motorState?.isVoltageSaturated && (
                   <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500 text-[10px] font-mono font-bold">
-                    BÃO HÒA ĐIỆN ÁP BUS (V_DC)
+                    {isVi ? 'BÃO HÒA ĐIỆN ÁP BUS (V_DC)' : 'VOLTAGE SATURATED (V_DC)'}
                   </span>
                 )}
               </div>
@@ -797,7 +801,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                 {/* Current i(t) */}
                 <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800">
                   <div className="text-slate-400 text-[10px] flex justify-between">
-                    <span>Dòng điện i(t):</span>
+                    <span>{isVi ? 'Dòng điện i(t):' : 'Stator Current i(t):'}</span>
                     <span className="text-slate-400">Max: {motorParams.peakCurrent} A</span>
                   </div>
                   <div className="text-base font-bold text-sky-400 mt-1">
@@ -818,7 +822,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                 {/* Voltage v(t) */}
                 <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800">
                   <div className="text-slate-400 text-[10px] flex justify-between">
-                    <span>Điện áp phần ứng:</span>
+                    <span>{isVi ? 'Điện áp phần ứng:' : 'Armature Voltage:'}</span>
                     <span className="text-slate-400">Bus: {dcBusState?.voltageV.toFixed(1) || motorParams.ratedVoltage} V</span>
                   </div>
                   <div className="text-base font-bold text-purple-400 mt-1">
@@ -837,7 +841,7 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                 {/* Rotor RPM */}
                 <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800">
                   <div className="text-slate-400 text-[10px] flex justify-between">
-                    <span>Tốc độ Rotor:</span>
+                    <span>{isVi ? 'Tốc độ Rotor:' : 'Rotor Speed:'}</span>
                     <span className="text-slate-400">Max: {motorParams.maxRpm}</span>
                   </div>
                   <div className="text-base font-bold text-emerald-400 mt-1">
@@ -845,27 +849,27 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
                     <span className="text-xs text-slate-400">RPM</span>
                   </div>
                   <div className="text-[10px] text-slate-400 mt-1">
-                    Trục link: {((motorState.rotorSpeedRpm / motorParams.gearRatio) * (360 / 60)).toFixed(1)} °/s
+                    {isVi ? 'Trục link:' : 'Link axis:'} {((motorState.rotorSpeedRpm / motorParams.gearRatio) * (360 / 60)).toFixed(1)} °/s
                   </div>
                 </div>
 
                 {/* Power & Heat Losses */}
                 <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800">
                   <div className="text-slate-400 text-[10px] flex justify-between">
-                    <span>Tổn hao cuộn dây I²·R:</span>
+                    <span>{isVi ? 'Tổn hao cuộn dây I²·R:' : 'Copper Heat Loss I²·R:'}</span>
                     <Flame className="w-3.5 h-3.5 text-rose-400" />
                   </div>
                   <div className="text-base font-bold text-rose-400 mt-1">
                     {motorState.copperLossW.toFixed(1)} <span className="text-xs text-slate-400">W</span>
                   </div>
                   <div className="text-[10px] text-slate-400 mt-1">
-                    Biến tần loss: {(currentAxisInverter?.totalLossW || 0).toFixed(1)} W
+                    {isVi ? 'Biến tần loss:' : 'Inverter loss:'} {(currentAxisInverter?.totalLossW || 0).toFixed(1)} W
                   </div>
                 </div>
               </div>
             ) : (
               <div className="py-4 text-center text-xs font-mono text-slate-500">
-                Nhấn [Chạy Động Lực Học] trong bảng điều khiển để bắt đầu tích phân và theo dõi dòng/áp/biến tần thời gian thực.
+                {isVi ? 'Nhấn [Chạy Động Lực Học] trong bảng điều khiển để bắt đầu tích phân và theo dõi dòng/áp/biến tần thời gian thực.' : 'Click [Simulate Dynamics] in the control panel to initiate numerical integration and live telemetry.'}
               </div>
             )}
           </div>
@@ -875,14 +879,14 @@ export const MotorDriveModal: React.FC<MotorDriveModalProps> = ({
         <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between">
           <div className="flex items-center space-x-2 text-xs font-mono text-slate-400">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span>Mô hình Biến tần & Động cơ đồng bộ liên tục vào vòng lặp RK4 500 Hz</span>
+            <span>{isVi ? 'Mô hình Biến tần & Động cơ đồng bộ liên tục vào vòng lặp RK4 500 Hz' : 'Inverter & Motor dynamics continuously integrated into RK4 500 Hz loop'}</span>
           </div>
 
           <button
             onClick={onClose}
             className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-mono font-bold transition shadow-lg shadow-rose-900/30"
           >
-            Đóng & Áp Dụng
+            {isVi ? 'Đóng & Áp Dụng' : 'Apply & Close'}
           </button>
         </div>
       </div>

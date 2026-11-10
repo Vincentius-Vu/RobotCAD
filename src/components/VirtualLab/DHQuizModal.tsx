@@ -1,3 +1,4 @@
+import { useTranslation } from '../../i18n';
 import React, { useState, useMemo } from 'react';
 import {
   GraduationCap,
@@ -19,11 +20,12 @@ interface DHQuizModalProps {
 }
 
 export const DHQuizModal: React.FC<DHQuizModalProps> = ({ isOpen, onClose }) => {
+  const { t, language } = useTranslation();
   const { robotModel } = useRobotStore();
 
   const questions = useMemo(() => {
     if (!robotModel) return [];
-    return DHQuizEngine.generateQuizForRobot(robotModel);
+    return DHQuizEngine.generateQuizForRobot(robotModel, language);
   }, [robotModel]);
 
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
@@ -68,7 +70,7 @@ export const DHQuizModal: React.FC<DHQuizModalProps> = ({ isOpen, onClose }) => 
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Thực hành thẩm định 2 quy tắc vàng Denavit-Hartenberg & thông số động học
+                {language === 'vi' ? 'Thực hành thẩm định 2 quy tắc vàng Denavit-Hartenberg & thông số động học' : 'Validate the 2 golden rules of Denavit-Hartenberg & kinematic parameters'}
               </p>
             </div>
           </div>
@@ -76,7 +78,7 @@ export const DHQuizModal: React.FC<DHQuizModalProps> = ({ isOpen, onClose }) => 
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-            title="Đóng (Esc)"
+            title={t.common.close}
           >
             <X className="w-5 h-5" />
           </button>
@@ -87,7 +89,7 @@ export const DHQuizModal: React.FC<DHQuizModalProps> = ({ isOpen, onClose }) => 
           <div className="flex items-center space-x-2 text-slate-300">
             <BookOpen className="w-4 h-4 text-sky-400" />
             <span>
-              Tiến độ: <strong className="text-white">{answeredCount}</strong> / {questions.length} câu hỏi
+              {language === 'vi' ? <>Tiến độ: <strong className="text-white">{answeredCount}</strong> / {questions.length} câu hỏi</> : <>Progress: <strong className="text-white">{answeredCount}</strong> / {questions.length} questions</>}
             </span>
           </div>
 
@@ -102,8 +104,7 @@ export const DHQuizModal: React.FC<DHQuizModalProps> = ({ isOpen, onClose }) => 
               >
                 <Award className="w-3.5 h-3.5" />
                 <span>
-                  Điểm: {quizResult.scorePercentage}% ({quizResult.correctAnswers}/{quizResult.totalQuestions}) -{' '}
-                  {quizResult.passed ? 'ĐẠT (PASSED)' : 'CẦN ÔN TẬP'}
+                  <span>{language === 'vi' ? 'Điểm' : 'Score'}: {quizResult.scorePercentage}% ({quizResult.correctAnswers}/{quizResult.totalQuestions}) - {quizResult.passed ? (language === 'vi' ? 'ĐẠT (PASSED)' : 'PASSED') : (language === 'vi' ? 'CẦN ÔN TẬP' : 'NEEDS REVIEW')}</span>
                 </span>
               </span>
 
@@ -112,7 +113,7 @@ export const DHQuizModal: React.FC<DHQuizModalProps> = ({ isOpen, onClose }) => 
                 className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700 text-xs font-medium transition"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>Làm lại</span>
+                <span>{language === 'vi' ? 'Làm lại' : 'Reset'}</span>
               </button>
             </div>
           )}
@@ -148,12 +149,12 @@ export const DHQuizModal: React.FC<DHQuizModalProps> = ({ isOpen, onClose }) => 
                       {resultItem.isCorrect ? (
                         <span className="flex items-center space-x-1 text-emerald-400 text-xs font-semibold">
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>Chính xác</span>
+                          <span>{language === 'vi' ? 'Chính xác' : 'Correct'}</span>
                         </span>
                       ) : (
                         <span className="flex items-center space-x-1 text-rose-400 text-xs font-semibold">
                           <XCircle className="w-4 h-4" />
-                          <span>Chưa đúng</span>
+                          <span>{language === 'vi' ? 'Chưa đúng' : 'Incorrect'}</span>
                         </span>
                       )}
                     </div>
@@ -212,7 +213,7 @@ export const DHQuizModal: React.FC<DHQuizModalProps> = ({ isOpen, onClose }) => 
                   <div className="mt-3 p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-xs text-slate-300 flex items-start space-x-2">
                     <HelpCircle className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="text-sky-300 font-semibold">Giải thích sư phạm: </strong>
+                      <strong className="text-sky-300 font-semibold">{language === 'vi' ? 'Giải thích sư phạm: ' : 'Pedagogical Explanation: '}</strong>
                       <span>{resultItem.pedagogicalFeedback}</span>
                     </div>
                   </div>
@@ -226,8 +227,7 @@ export const DHQuizModal: React.FC<DHQuizModalProps> = ({ isOpen, onClose }) => 
         <div className="px-5 py-3 bg-slate-950 border-t border-slate-800/80 flex items-center justify-between shrink-0">
           <span className="text-xs text-slate-400">
             {quizResult
-              ? 'Thầy/Cô và sinh viên có thể dùng điểm số này để đánh giá hiểu biết về gán hệ trục D-H.'
-              : 'Hãy trả lời đủ các câu hỏi và nhấn Nộp bài để nhận giải thích chi tiết.'}
+              ? (language === 'vi' ? 'Thầy/Cô và sinh viên có thể dùng điểm số này để đánh giá hiểu biết về gán hệ trục D-H.' : 'Evaluates comprehension of Denavit-Hartenberg coordinate frame assignments.') : (language === 'vi' ? 'Hãy trả lời đủ các câu hỏi và nhấn Nộp bài để nhận giải thích chi tiết.' : 'Answer all questions and submit for grading.')}
           </span>
 
           <div className="flex items-center space-x-2">
@@ -241,14 +241,14 @@ export const DHQuizModal: React.FC<DHQuizModalProps> = ({ isOpen, onClose }) => 
                     : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
                 }`}
               >
-                Nộp bài & Chấm điểm
+                {language === 'vi' ? 'Nộp bài & Chấm điểm' : 'Submit & Grade'}
               </button>
             ) : (
               <button
                 onClick={onClose}
                 className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-semibold transition"
               >
-                Đóng bài tập
+                {language === 'vi' ? 'Đóng bài tập' : 'Close'}
               </button>
             )}
           </div>

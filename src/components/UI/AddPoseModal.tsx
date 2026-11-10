@@ -1,3 +1,4 @@
+import { useTranslation } from '../../i18n';
 import React, { useState, useEffect } from 'react';
 import { useRobotStore } from '../../store/robotStore';
 import { useMobileRobotStore } from '../../store/mobileRobotStore';
@@ -17,6 +18,8 @@ interface AddPoseModalProps {
 }
 
 export const AddPoseModal: React.FC<AddPoseModalProps> = ({ isOpen, onClose }) => {
+  const { language } = useTranslation();
+  const isVi = language === 'vi';
   const { activeDomain, tcpPose, waypoints, addPoseWaypoint } = useRobotStore();
   const { pose: mobilePose, poseWaypoints, addPoseWaypoint: addMobilePose } = useMobileRobotStore();
 
@@ -97,7 +100,7 @@ export const AddPoseModal: React.FC<AddPoseModalProps> = ({ isOpen, onClose }) =
     const dur = parseFloat(armDuration);
 
     if (isNaN(x) || isNaN(y) || isNaN(z) || isNaN(r) || isNaN(p) || isNaN(yw) || isNaN(dur) || dur <= 0) {
-      setArmError('Vui lòng nhập đầy đủ các thông số hợp lệ (Thời gian phải > 0s)');
+      setArmError(isVi ? 'Vui lòng nhập đầy đủ các thông số hợp lệ (Thời gian phải > 0s)' : 'Please enter valid parameters (transit duration must be > 0s)');
       return;
     }
 
@@ -109,7 +112,7 @@ export const AddPoseModal: React.FC<AddPoseModalProps> = ({ isOpen, onClose }) =
     );
 
     if (!result.success) {
-      setArmError(result.error || 'Không tìm được cấu hình khớp khả thi (Out of reach)');
+      setArmError(result.error || (isVi ? 'Không tìm được cấu hình khớp khả thi (Out of reach)' : 'No inverse kinematic solution found (Pose unreachable)'));
     } else {
       onClose();
     }
@@ -155,11 +158,10 @@ export const AddPoseModal: React.FC<AddPoseModalProps> = ({ isOpen, onClose }) =
             <div>
               <h3 className="text-sm font-bold text-slate-100">
                 {activeDomain === 'manipulator'
-                  ? 'Thêm Pose Quỹ Đạo Khớp (Cartesian Pose)'
-                  : 'Thêm Pose Điểm Đến AMR (Mission Pose)'}
+                  ? (language === 'vi' ? 'Thêm Pose Quỹ Đạo Khớp (Cartesian Pose)' : 'Define Cartesian Waypoint Pose') : (language === 'vi' ? 'Thêm Pose Điểm Đến AMR (Mission Pose)' : 'Define AMR Mission Docking Pose')}
               </h3>
               <p className="text-[11px] text-slate-400">
-                Xác định Vị trí không gian, Hướng góc và Thời gian di chuyển dự kiến
+                {language === 'vi' ? 'Xác định Vị trí không gian, Hướng góc và Thời gian di chuyển dự kiến' : 'Specify Cartesian Position, Euler Orientation, and Scheduled Segment Duration'}
               </p>
             </div>
           </div>
@@ -176,12 +178,12 @@ export const AddPoseModal: React.FC<AddPoseModalProps> = ({ isOpen, onClose }) =
           <form onSubmit={handleAddArmPose} className="p-5 space-y-4">
             {/* Pose Name */}
             <div>
-              <label className="block text-[11px] font-mono text-slate-400 mb-1">Tên Pose / Waypoint:</label>
+              <label className="block text-[11px] font-mono text-slate-400 mb-1">{language === 'vi' ? 'Tên Pose / Waypoint:' : 'Waypoint / Pose Identifier:'}</label>
               <input
                 type="text"
                 value={armName}
                 onChange={(e) => setArmName(e.target.value)}
-                placeholder="Ví dụ: Pose Bốc Hàng, Pose Đặt Tải..."
+                placeholder={isVi ? "Ví dụ: Pose Bốc Hàng, Pose Đặt Tải..." : "e.g. Pick-up Pose, Docking Station B2..."}
                 className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-sky-500"
               />
             </div>
@@ -191,14 +193,14 @@ export const AddPoseModal: React.FC<AddPoseModalProps> = ({ isOpen, onClose }) =
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-mono text-sky-400 font-semibold flex items-center space-x-1">
                   <Move3d className="w-3.5 h-3.5" />
-                  <span>1. Vị trí Không gian TCP (Position [mm])</span>
+                  <span>{language === 'vi' ? '1. Vị trí Không gian TCP (Position [mm])' : '1. End-Effector Cartesian Position (TCP [mm])'}</span>
                 </span>
                 <button
                   type="button"
                   onClick={handleFillCurrentArm}
                   className="text-[10px] font-mono text-emerald-400 hover:text-emerald-300 underline"
                 >
-                  Lấy từ tư thế hiện tại
+                  {language === 'vi' ? 'Lấy từ tư thế hiện tại' : 'Sample Current Pose'}
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-2 font-mono text-xs">
@@ -239,7 +241,7 @@ export const AddPoseModal: React.FC<AddPoseModalProps> = ({ isOpen, onClose }) =
             <div className="space-y-1.5">
               <span className="text-[11px] font-mono text-amber-400 font-semibold flex items-center space-x-1">
                 <Compass className="w-3.5 h-3.5" />
-                <span>2. Hướng Góc Euler XYZ (Orientation [°])</span>
+                <span>{language === 'vi' ? '2. Hướng Góc Euler XYZ (Orientation [°])' : '2. Euler Orientation Angles (XYZ [°])'}</span>
               </span>
               <div className="grid grid-cols-3 gap-2 font-mono text-xs">
                 <div className="p-2 rounded-lg bg-slate-950 border border-slate-800">
@@ -279,7 +281,7 @@ export const AddPoseModal: React.FC<AddPoseModalProps> = ({ isOpen, onClose }) =
             <div className="space-y-1.5">
               <span className="text-[11px] font-mono text-purple-400 font-semibold flex items-center space-x-1">
                 <Clock className="w-3.5 h-3.5" />
-                <span>3. Thời gian Dự kiến Di chuyển (Segment Transit Duration [s])</span>
+                <span>{isVi ? '3. Thời gian Dự kiến Di chuyển (Segment Transit Duration [s])' : '3. Scheduled Segment Duration [s]'}</span>
               </span>
               <div className="flex items-center space-x-2">
                 <input
@@ -290,7 +292,7 @@ export const AddPoseModal: React.FC<AddPoseModalProps> = ({ isOpen, onClose }) =
                   onChange={(e) => setArmDuration(e.target.value)}
                   className="w-32 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono font-bold text-slate-100 focus:outline-none focus:border-purple-500"
                 />
-                <span className="text-xs text-slate-400 font-mono">giây (transit time từ pose trước)</span>
+                <span className="text-xs text-slate-400 font-mono">{isVi ? "giây (transit time từ pose trước)" : "sec (transit time from prior pose)"}</span>
               </div>
             </div>
 
@@ -309,14 +311,14 @@ export const AddPoseModal: React.FC<AddPoseModalProps> = ({ isOpen, onClose }) =
                 onClick={onClose}
                 className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition"
               >
-                Hủy bỏ
+                {language === 'vi' ? 'Hủy bỏ' : 'Cancel'}
               </button>
               <button
                 type="submit"
                 className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold font-mono transition shadow-md shadow-emerald-600/30 flex items-center space-x-1.5"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Kiểm tra IK & Thêm Pose</span>
+                <span>{isVi ? 'Kiểm tra IK & Thêm Pose' : 'Solve IK & Insert Pose'}</span>
               </button>
             </div>
           </form>
@@ -324,12 +326,12 @@ export const AddPoseModal: React.FC<AddPoseModalProps> = ({ isOpen, onClose }) =
           <form onSubmit={handleAddMobilePose} className="p-5 space-y-4">
             {/* Mission Pose Name */}
             <div>
-              <label className="block text-[11px] font-mono text-slate-400 mb-1">Tên Trạm / Điểm Dừng AMR:</label>
+              <label className="block text-[11px] font-mono text-slate-400 mb-1">{isVi ? "Tên Trạm / Điểm Dừng AMR:" : "Station / Waypoint Identifier:"}</label>
               <input
                 type="text"
                 value={mobileName}
                 onChange={(e) => setMobileName(e.target.value)}
-                placeholder="Ví dụ: Trạm sạc, Kệ hàng A1, Khu trả hàng..."
+                placeholder={isVi ? "Ví dụ: Trạm sạc, Kệ hàng A1, Khu trả hàng..." : "e.g. Charging Station 1, Rack A3, Drop-off Zone..."}
                 className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-sky-500"
               />
             </div>
@@ -339,19 +341,19 @@ export const AddPoseModal: React.FC<AddPoseModalProps> = ({ isOpen, onClose }) =
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-mono text-sky-400 font-semibold flex items-center space-x-1">
                   <Navigation className="w-3.5 h-3.5" />
-                  <span>1. Tọa độ Mặt bằng Sàn Nhà xưởng (Position [m])</span>
+                  <span>{isVi ? '1. Tọa độ Mặt bằng Sàn Nhà xưởng (Position [m])' : '1. Floor Coordinates (Position [m])'}</span>
                 </span>
                 <button
                   type="button"
                   onClick={handleFillCurrentMobile}
                   className="text-[10px] font-mono text-emerald-400 hover:text-emerald-300 underline"
                 >
-                  Lấy vị trí xe hiện tại
+                  {isVi ? 'Lấy vị trí xe hiện tại' : 'Sample Current Pose'}
                 </button>
               </div>
               <div className="grid grid-cols-2 gap-2 font-mono text-xs">
                 <div className="p-2 rounded-lg bg-slate-950 border border-slate-800">
-                  <span className="text-slate-500 text-[10px] block">Tọa độ X (m)</span>
+                  <span className="text-slate-500 text-[10px] block">{isVi ? "Tọa độ X (m)" : "X Coordinate (m)"}</span>
                   <input
                     type="number"
                     step="0.1"
@@ -361,7 +363,7 @@ export const AddPoseModal: React.FC<AddPoseModalProps> = ({ isOpen, onClose }) =
                   />
                 </div>
                 <div className="p-2 rounded-lg bg-slate-950 border border-slate-800">
-                  <span className="text-slate-500 text-[10px] block">Tọa độ Y (m)</span>
+                  <span className="text-slate-500 text-[10px] block">{isVi ? "Tọa độ Y (m)" : "Y Coordinate (m)"}</span>
                   <input
                     type="number"
                     step="0.1"
@@ -377,11 +379,11 @@ export const AddPoseModal: React.FC<AddPoseModalProps> = ({ isOpen, onClose }) =
             <div className="space-y-1.5">
               <span className="text-[11px] font-mono text-amber-400 font-semibold flex items-center space-x-1">
                 <Compass className="w-3.5 h-3.5" />
-                <span>2. Hướng Đầu Xe Khi Đến Đích (Heading Yaw θ [°])</span>
+                <span>{isVi ? '2. Hướng Đầu Xe Khi Đến Đích (Heading Yaw θ [°])' : '2. Target Arrival Heading (Yaw θ [°])'}</span>
               </span>
               <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 font-mono text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-500 text-[10px]">Góc quay hướng đầu xe θ</span>
+                  <span className="text-slate-500 text-[10px]">{isVi ? "Góc quay hướng đầu xe θ" : "Chassis Heading Yaw θ"}</span>
                   <span className="text-amber-400 font-bold">{mobTheta}°</span>
                 </div>
                 <input
@@ -400,7 +402,7 @@ export const AddPoseModal: React.FC<AddPoseModalProps> = ({ isOpen, onClose }) =
             <div className="space-y-1.5">
               <span className="text-[11px] font-mono text-purple-400 font-semibold flex items-center space-x-1">
                 <Clock className="w-3.5 h-3.5" />
-                <span>3. Thời gian Dự kiến Di chuyển (Arrival Duration [s])</span>
+                <span>{isVi ? '3. Thời gian Dự kiến Di chuyển (Arrival Duration [s])' : '3. Estimated Travel Duration [s]'}</span>
               </span>
               <div className="flex items-center space-x-3">
                 <input
@@ -411,11 +413,11 @@ export const AddPoseModal: React.FC<AddPoseModalProps> = ({ isOpen, onClose }) =
                   onChange={(e) => setMobDuration(e.target.value)}
                   className="w-32 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono font-bold text-slate-100 focus:outline-none focus:border-purple-500"
                 />
-                <span className="text-xs text-slate-400 font-mono">giây</span>
+                <span className="text-xs text-slate-400 font-mono">{isVi ? "giây" : "sec"}</span>
               </div>
               <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 font-mono text-[11px] text-slate-400 flex items-center justify-between">
-                <span>Khoảng cách: <strong className="text-sky-400">{distMob.toFixed(2)} m</strong></span>
-                <span>Vận tốc ước tính: <strong className="text-emerald-400">{estimatedSpeed} m/s</strong></span>
+                <span>{isVi ? "Khoảng cách:" : "Distance:"} <strong className="text-sky-400">{distMob.toFixed(2)} m</strong></span>
+                <span>{isVi ? "Vận tốc ước tính:" : "Est. Speed:"} <strong className="text-emerald-400">{estimatedSpeed} m/s</strong></span>
               </div>
             </div>
 
@@ -426,14 +428,14 @@ export const AddPoseModal: React.FC<AddPoseModalProps> = ({ isOpen, onClose }) =
                 onClick={onClose}
                 className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition"
               >
-                Hủy bỏ
+                {language === 'vi' ? 'Hủy bỏ' : 'Cancel'}
               </button>
               <button
                 type="submit"
                 className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold font-mono transition shadow-md shadow-emerald-600/30 flex items-center space-x-1.5"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Thêm Pose Vào Hành Trình</span>
+                <span>{isVi ? 'Thêm Pose Vào Hành Trình' : 'Insert Waypoint into Mission'}</span>
               </button>
             </div>
           </form>

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useRobotStore } from '../../store/robotStore';
+import { useTranslation } from '../../i18n';
 import {
   exportTrajectoryToCSV,
   exportDynamicsToCSV,
@@ -61,6 +62,8 @@ const LINE_STYLE_DASHES: Record<LineStyleType, string | undefined> = {
 };
 
 export const MotionProfilePlots: React.FC = () => {
+  const { language } = useTranslation();
+  const isVi = language === 'vi';
   const {
     activeTrajectory,
     playbackState,
@@ -685,7 +688,7 @@ export const MotionProfilePlots: React.FC = () => {
           <div className="flex items-center space-x-2">
             <span className="text-xs font-mono font-bold text-purple-300 flex items-center space-x-1.5">
               <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-              <span>Mặt Phẳng Pha SMC (Phase Portrait Plane: ė vs e) - Khớp J{activeJoint + 1}</span>
+              <span>{isVi ? 'Mặt Phẳng Pha SMC (Phase Portrait Plane: ė vs e) - Khớp J' : 'SMC Phase Portrait Plane: ė vs e - Joint J'}{activeJoint + 1}</span>
             </span>
             <span className="text-[10px] font-mono text-slate-400">
               Mặt trượt s = ė + {lambdaVal}e = 0
@@ -1047,8 +1050,8 @@ export const MotionProfilePlots: React.FC = () => {
             }`}
             title={
               plotSource !== 'kinematic' && dynamicSamples && dynamicSamples.length > 0
-                ? 'Xuất dữ liệu động học & động lực học thực tế (q, q_des, error, torques, energy) dạng CSV'
-                : 'Xuất bảng dữ liệu đầy đủ dạng file CSV để vẽ lại bằng MATLAB/Python'
+                ? (isVi ? 'Xuất dữ liệu động học & động lực học thực tế (q, q_des, error, torques, energy) dạng CSV' : 'Export kinematic & dynamic telemetry (q, q_des, error, torques, energy) as CSV')
+                : (isVi ? 'Xuất bảng dữ liệu đầy đủ dạng file CSV để vẽ lại bằng MATLAB/Python' : 'Export complete numerical time-series to CSV for MATLAB/Python replotting')
             }
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
@@ -1060,7 +1063,7 @@ export const MotionProfilePlots: React.FC = () => {
             <button
               onClick={() => setIsPngMenuOpen(!isPngMenuOpen)}
               className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-mono transition"
-              title="Xuất ảnh PNG độ nét cao (96, 150, 300, 600 DPI)"
+              title={isVi ? "Xuất ảnh PNG độ nét cao (96, 150, 300, 600 DPI)" : "Export high-resolution PNG (96, 150, 300, 600 DPI)"}
             >
               <FileImage className="w-3.5 h-3.5 text-sky-400" />
               <span>PNG DPI</span>
@@ -1085,7 +1088,7 @@ export const MotionProfilePlots: React.FC = () => {
           <button
             onClick={handleExportPDF}
             className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-rose-600/30 hover:bg-rose-600/40 text-rose-300 border border-rose-500/40 text-xs font-mono transition"
-            title="Xuất báo cáo khoa học dạng tài liệu PDF chất lượng cao"
+            title={isVi ? "Xuất báo cáo khoa học dạng tài liệu PDF chất lượng cao" : "Export publication-quality PDF scientific report"}
           >
             <FileText className="w-3.5 h-3.5 text-rose-400" />
             <span>PDF</span>
@@ -1161,7 +1164,7 @@ export const MotionProfilePlots: React.FC = () => {
                         )}
                       </button>
                       <span className="text-xs font-mono font-bold" style={{ color: style.color }}>
-                        Khớp J{j + 1}
+                        {isVi ? 'Khớp J' : 'Joint J'}{j + 1}
                       </span>
                     </div>
 
@@ -1251,13 +1254,13 @@ export const MotionProfilePlots: React.FC = () => {
         {layoutMode === 'phase-plane' && renderPhasePlaneSVG()}
 
         {(layoutMode === 'subplots' || layoutMode === 'positions') &&
-          renderSubplotSVG('positions', 'Góc Khớp q(t) - Joint Position', 'deg', posBounds, svgPosRef)}
+          renderSubplotSVG('positions', isVi ? 'Góc Khớp q(t) - Joint Position' : 'Joint Position q(t)', 'deg', posBounds, svgPosRef)}
 
         {(layoutMode === 'subplots' || layoutMode === 'velocities') &&
-          renderSubplotSVG('velocities', 'Vận Tốc Khớp dq/dt - Joint Velocity', 'deg/s', velBounds, svgVelRef)}
+          renderSubplotSVG('velocities', isVi ? 'Vận Tốc Khớp dq/dt - Joint Velocity' : 'Joint Velocity dq/dt', 'deg/s', velBounds, svgVelRef)}
 
         {(layoutMode === 'subplots' || layoutMode === 'accelerations') &&
-          renderSubplotSVG('accelerations', 'Gia Tốc Khớp d²q/dt² - Joint Acceleration', 'deg/s²', accBounds, svgAccRef)}
+          renderSubplotSVG('accelerations', isVi ? 'Gia Tốc Khớp d²q/dt² - Joint Acceleration' : 'Joint Acceleration d²q/dt²', 'deg/s²', accBounds, svgAccRef)}
       </div>
 
       {/* Bottom Legend with Custom Styles */}

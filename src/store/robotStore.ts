@@ -42,8 +42,14 @@ import {
   PowerConverterParameters,
 } from '../types/powerConverter';
 import { ScientificBenchmarkExporter } from '../services/scientificBenchmarkExporter';
+import { Language } from '../i18n/types';
 
 interface RobotStoreState {
+  // Internationalization (i18n)
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  toggleLanguage: () => void;
+
   // Primary Domain Switcher (Manipulator vs Autonomous Mobile Robot)
   activeDomain: 'manipulator' | 'mobile_robot';
   setActiveDomain: (domain: 'manipulator' | 'mobile_robot') => void;
@@ -570,6 +576,21 @@ function startDynamicsLoop(get: any, set: any) {
 }
 
 export const useRobotStore = create<RobotStoreState>((set, get) => ({
+  language: (typeof window !== 'undefined' && (localStorage.getItem('robocad_language') as Language)) || 'en',
+  setLanguage: (lang: Language) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('robocad_language', lang);
+    }
+    set({ language: lang });
+  },
+  toggleLanguage: () => {
+    const nextLang = get().language === 'en' ? 'vi' : 'en';
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('robocad_language', nextLang);
+    }
+    set({ language: nextLang });
+  },
+
   activeDomain: 'manipulator',
   setActiveDomain: (domain) => set({ activeDomain: domain }),
 

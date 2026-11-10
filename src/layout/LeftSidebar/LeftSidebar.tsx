@@ -39,8 +39,10 @@ import { CustomControllerModal } from '../../components/Dynamics/CustomControlle
 import { MotorDriveModal } from '../../components/Dynamics/MotorDriveModal';
 import { DEFAULT_LINK_PALETTE } from '../../services/robotLoader';
 import { MobileRobotSidebar } from './MobileRobotSidebar';
+import { useTranslation } from '../../i18n';
 
 export const LeftSidebar: React.FC = () => {
+  const { t } = useTranslation();
   const {
     activeDomain,
     isLeftSidebarOpen,
@@ -169,7 +171,7 @@ export const LeftSidebar: React.FC = () => {
           <div className="flex items-center space-x-2">
             <Sliders className="w-4 h-4 text-emerald-400" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-300">
-              AMR Điều hướng & Teleop
+              {t.topRibbon.domainMobile}
             </h3>
           </div>
         </div>
@@ -240,14 +242,14 @@ export const LeftSidebar: React.FC = () => {
                   <div key={joint.jointIndex} className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-850 space-y-2">
                     <div className="flex items-center justify-between text-xs font-mono">
                       <div className="flex items-center space-x-1.5">
-                        {/* Joint Badge (Khớp J_i) */}
+                        {/* Joint Badge (J_i) */}
                         <span
                           className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold shadow-xs"
-                          title={`Khớp điều khiển J${joint.jointIndex}`}
+                          title={`${t.manipulator.actuatedJoint} J${joint.jointIndex}`}
                         >
                           J{joint.jointIndex}
                         </span>
-                        {/* Link Badge (Khâu L_i) */}
+                        {/* Link Badge (L_i) */}
                         <span
                           className="px-1.5 py-0.5 rounded text-[10px] font-bold border shadow-xs"
                           style={{
@@ -255,12 +257,12 @@ export const LeftSidebar: React.FC = () => {
                             borderColor: linkColor,
                             color: '#f8fafc',
                           }}
-                          title={`Khâu cơ khí L${joint.jointIndex}`}
+                          title={`${t.manipulator.mechanicalLink} L${joint.jointIndex}`}
                         >
                           L{joint.jointIndex}
                         </span>
                         <span className="text-slate-400 font-medium text-[11px]">
-                          Khớp {joint.jointIndex}
+                          {t.manipulator.jointLabel} {joint.jointIndex}
                         </span>
                       </div>
                       <span className="text-sky-400 font-bold">
@@ -440,7 +442,7 @@ export const LeftSidebar: React.FC = () => {
                   <button
                     onClick={() => openAddPoseModal()}
                     className="flex items-center space-x-1 px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-medium transition shadow"
-                    title="Thêm Pose với Vị trí X/Y/Z, Hướng và Thời gian dự kiến"
+                    title={t.manipulator.addPoseTooltip}
                   >
                     <Plus className="w-3 h-3" />
                     <span>+ Add Pose</span>
@@ -448,9 +450,9 @@ export const LeftSidebar: React.FC = () => {
                   <button
                     onClick={() => addWaypointFromCurrent()}
                     className="px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-medium transition"
-                    title="Lấy nhanh tư thế hiện tại"
+                    title={t.manipulator.sampleTcpTooltip}
                   >
-                    Lấy TCP
+                    {t.manipulator.sampleTcpBtn}
                   </button>
                   <button
                     onClick={clearWaypoints}
@@ -710,12 +712,12 @@ export const LeftSidebar: React.FC = () => {
                   {dynamicsSettings.isRunning ? (
                     <>
                       <Pause className="w-3.5 h-3.5 fill-current" />
-                      <span>Dừng vật lý</span>
+                      <span>{t.manipulator.haltPhysics}</span>
                     </>
                   ) : (
                     <>
                       <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
-                      <span>Chạy mô phỏng</span>
+                      <span>{t.manipulator.runSimulation}</span>
                     </>
                   )}
                 </button>
@@ -725,7 +727,7 @@ export const LeftSidebar: React.FC = () => {
                   className="flex items-center justify-center space-x-1 py-2 px-3 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-mono transition"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Cân bằng</span>
+                  <span>{t.manipulator.balanceGravity}</span>
                 </button>
               </div>
 
@@ -740,16 +742,16 @@ export const LeftSidebar: React.FC = () => {
                     }
                     className="rounded bg-slate-900 border-slate-700 text-rose-500 focus:ring-0 focus:ring-offset-0 cursor-pointer accent-rose-500"
                   />
-                  <span>Tự động lưu CSV khi Dừng (Bài báo KH)</span>
+                  <span>{t.manipulator.autoSaveCsvNotice}</span>
                 </label>
 
                 <button
                   onClick={exportScientificBenchmarkCSV}
                   className="w-full flex items-center justify-center space-x-1.5 py-1.5 px-2 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-[10px] font-mono font-semibold transition"
-                  title="Xuất file CSV chứa toàn bộ siêu dữ liệu, thông số robot, động cơ, biến tần và chỉ số ISE/IAE/ITAE"
+                  title={t.manipulator.exportCsvTooltip}
                 >
                   <FileSpreadsheet className="w-3 h-3 text-emerald-400" />
-                  <span>Xuất File CSV Thí Nghiệm (.CSV)</span>
+                  <span>{t.manipulator.exportCsvBtn}</span>
                 </button>
               </div>
             </div>
@@ -758,7 +760,7 @@ export const LeftSidebar: React.FC = () => {
             <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold text-slate-300 block">
-                  Thuật toán Điều khiển (Controller)
+                  {t.manipulator.controlAlgorithmTitle}
                 </span>
                 <button
                   onClick={() => {
@@ -766,10 +768,10 @@ export const LeftSidebar: React.FC = () => {
                     setIsControllerModalOpen(true);
                   }}
                   className="flex items-center space-x-1 px-2 py-1 rounded-md bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 text-[10px] font-mono font-medium transition"
-                  title="Thêm hoặc phát triển thuật toán điều khiển mới (MPC, ADRC, Adaptive...)"
+                  title={t.manipulator.addControllerTooltip}
                 >
                   <Plus className="w-3 h-3 text-rose-400" />
-                  <span>+ Thêm Bộ ĐK</span>
+                  <span>{t.manipulator.addControllerBtn}</span>
                 </button>
               </div>
 
@@ -783,11 +785,11 @@ export const LeftSidebar: React.FC = () => {
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs font-mono text-slate-100 focus:outline-none focus:border-rose-500 transition appearance-none cursor-pointer pr-8"
                 >
                   {Object.entries({
-                    classical: 'Cổ điển / Bù Trọng lực',
-                    robust: 'Bền vững / Phi tuyến (Robust & SMC)',
-                    impedance: 'Tiếp xúc / Tương tác Lực (Impedance)',
-                    optimal: 'Tối ưu & Thích nghi (Optimal / Adaptive)',
-                    custom: 'Thuật toán Tùy biến (Custom Plugins)',
+                    classical: t.manipulator.groupClassical,
+                    robust: t.manipulator.groupRobust,
+                    impedance: t.manipulator.groupImpedance,
+                    optimal: t.manipulator.groupOptimal,
+                    custom: t.manipulator.groupCustom,
                   }).map(([catKey, catLabel]) => {
                     const groupCtrls = ControllerStrategyRegistry.getAll().filter((c) => c.category === catKey);
                     if (groupCtrls.length === 0) return null;
@@ -828,7 +830,7 @@ export const LeftSidebar: React.FC = () => {
                           className="flex items-center space-x-1 text-[10px] text-amber-400 hover:text-amber-300 font-mono transition"
                         >
                           <Pencil className="w-3 h-3" />
-                          <span>Sửa mã nguồn</span>
+                          <span>{t.manipulator.editSourceCode}</span>
                         </button>
                       )}
                     </div>
@@ -845,13 +847,13 @@ export const LeftSidebar: React.FC = () => {
                   <div className="flex items-center justify-between border-b border-slate-800 pb-1">
                     <span className="text-[11px] font-mono font-bold text-purple-300 flex items-center space-x-1">
                       <Sparkles className="w-3 h-3 text-purple-400" />
-                      <span>Cấu hình Mặt Trượt SMC: s = ė + Λe</span>
+                      <span>{t.manipulator.smcSlidingSurface}</span>
                     </span>
                   </div>
 
                   {/* Switching Law Function Selector */}
                   <div className="space-y-1">
-                    <span className="text-[10px] font-mono text-slate-400 block">Hàm chuyển mạch sw(s/Φ):</span>
+                    <span className="text-[10px] font-mono text-slate-400 block">{t.manipulator.switchingFunction}</span>
                     <div className="grid grid-cols-2 gap-1 text-[10px] font-mono">
                       {[
                         { id: 'boundary-layer', name: 'Sat (Boundary)' },
@@ -887,7 +889,7 @@ export const LeftSidebar: React.FC = () => {
                   {/* Lambda Slider */}
                   <div className="space-y-1">
                     <div className="flex justify-between text-[10px] font-mono">
-                      <span className="text-slate-400">Độ dốc mặt trượt Λ (rad/s):</span>
+                      <span className="text-slate-400">{t.manipulator.surfaceSlopeLambda}</span>
                       <span className="text-purple-300 font-bold">{dynamicsSettings.smcSettings?.lambda[0] || 20}</span>
                     </div>
                     <input
@@ -911,7 +913,7 @@ export const LeftSidebar: React.FC = () => {
                   {/* Switching Gain K_sw */}
                   <div className="space-y-1">
                     <div className="flex justify-between text-[10px] font-mono">
-                      <span className="text-slate-400">Độ lợi gia tốc bền vững K_sw:</span>
+                      <span className="text-slate-400">{t.manipulator.robustGainKsw}</span>
                       <span className="text-amber-400 font-bold">{dynamicsSettings.smcSettings?.switchingGain[0] || 20} rad/s²</span>
                     </div>
                     <input
@@ -936,7 +938,7 @@ export const LeftSidebar: React.FC = () => {
                   {dynamicsSettings.smcSettings?.switchingFunction !== 'sign' && (
                     <div className="space-y-1">
                       <div className="flex justify-between text-[10px] font-mono">
-                        <span className="text-slate-400">Bề dày lớp biên Φ:</span>
+                        <span className="text-slate-400">{t.manipulator.boundaryLayerPhi}</span>
                         <span className="text-emerald-400 font-bold">{dynamicsSettings.smcSettings?.boundaryLayer[0] || 0.15} rad/s</span>
                       </div>
                       <input
@@ -965,12 +967,12 @@ export const LeftSidebar: React.FC = () => {
             <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-2.5">
               <span className="text-xs font-mono font-bold text-slate-300 flex items-center space-x-1.5">
                 <Scale className="w-3.5 h-3.5 text-amber-400" />
-                <span>Nhiễu tải & Lực ngoài (Disturbance)</span>
+                <span>{t.manipulator.payloadDisturbanceTitle}</span>
               </span>
 
               <div className="space-y-1">
                 <div className="flex justify-between text-[11px] font-mono">
-                  <span className="text-slate-400">Tải trọng thêm (Payload):</span>
+                  <span className="text-slate-400">{t.manipulator.payloadAdded}</span>
                   <span className="text-amber-400 font-bold">{dynamicsSettings.payloadMass} kg</span>
                 </div>
                 <input
@@ -986,7 +988,7 @@ export const LeftSidebar: React.FC = () => {
 
               {/* Push Disturbance Buttons */}
               <div className="pt-1 border-t border-slate-850 space-y-1">
-                <span className="text-[10px] text-slate-400 font-mono block">Tác động lực tức thời lên đầu gắp TCP:</span>
+                <span className="text-[10px] text-slate-400 font-mono block">{t.manipulator.instantaneousDisturbance}</span>
                 <div className="grid grid-cols-2 gap-1.5 text-[11px] font-mono">
                   <button
                     onClick={() => {
@@ -996,7 +998,7 @@ export const LeftSidebar: React.FC = () => {
                     }}
                     className="p-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-750 text-slate-300 text-center"
                   >
-                    Đẩy +Fx (+15 N)
+                    {t.manipulator.pushFx}
                   </button>
                   <button
                     onClick={() => {
@@ -1006,7 +1008,7 @@ export const LeftSidebar: React.FC = () => {
                     }}
                     className="p-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-750 text-slate-300 text-center"
                   >
-                    Đè -Fz (-25 N)
+                    {t.manipulator.pushFz}
                   </button>
                 </div>
               </div>
@@ -1018,7 +1020,7 @@ export const LeftSidebar: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold text-slate-200 flex items-center space-x-1.5">
                   <Settings2 className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Bộ Thông Số Động Cơ & PID</span>
+                  <span>{t.manipulator.motorParamsPidTitle}</span>
                 </span>
                 <span
                   className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
@@ -1028,11 +1030,11 @@ export const LeftSidebar: React.FC = () => {
                   }`}
                   title={
                     activeDynamicsProfile?.isCustomTuned
-                      ? 'Các thông số đã được tùy biến và tự động lưu trên trình duyệt cho robot này'
-                      : 'Thông số chuẩn từ phòng thí nghiệm & nhà sản xuất'
+                      ? t.manipulator.customParamsSavedNotice
+                      : t.manipulator.defaultLabParamsNotice
                   }
                 >
-                  {activeDynamicsProfile?.isCustomTuned ? 'Đã Tùy Biến (Lưu)' : 'Mặc Định Hãng'}
+                  {activeDynamicsProfile?.isCustomTuned ? t.manipulator.customTunedBadge : t.manipulator.factoryDefaultBadge}
                 </span>
               </div>
 
@@ -1068,32 +1070,32 @@ export const LeftSidebar: React.FC = () => {
                 <button
                   onClick={() => dynFileInputRef.current?.click()}
                   className="flex items-center justify-center space-x-1 p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-sky-300 border border-slate-750 hover:border-sky-500/50 transition"
-                  title="Tải lên (Upload) file JSON thông số điều khiển cho robot này"
+                  title={t.manipulator.uploadJsonTooltip}
                 >
                   <Upload className="w-3 h-3 text-sky-400" />
-                  <span>Nạp JSON</span>
+                  <span>{t.manipulator.uploadJsonBtn}</span>
                 </button>
 
                 <button
                   onClick={exportDynamicsProfileJSON}
                   className="flex items-center justify-center space-x-1 p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-300 border border-slate-750 hover:border-emerald-500/50 transition"
-                  title="Lưu & Xuất (Download) toàn bộ thông số động cơ và bộ điều khiển dạng file JSON"
+                  title={t.manipulator.downloadJsonTooltip}
                 >
                   <Download className="w-3 h-3 text-emerald-400" />
-                  <span>Lưu JSON</span>
+                  <span>{t.manipulator.downloadJsonBtn}</span>
                 </button>
 
                 <button
                   onClick={() => {
                     resetDynamicsProfileToFactory();
-                    setDynToast({ text: `Đã khôi phục thông số gốc của ${robotModel.name}`, type: 'success' });
+                    setDynToast({ text: `${t.manipulator.restoredSuccessToast} ${robotModel.name}`, type: 'success' });
                     setTimeout(() => setDynToast(null), 3000);
                   }}
                   className="flex items-center justify-center space-x-1 p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-750 hover:border-slate-600 transition"
-                  title="Khôi phục lại thông số chuẩn định mức ban đầu của robot"
+                  title={t.manipulator.restoreDefaultsTooltip}
                 >
                   <RotateCcw className="w-3 h-3 text-slate-400" />
-                  <span>Khôi Phục</span>
+                  <span>{t.manipulator.restoreDefaultsBtn}</span>
                 </button>
               </div>
 
@@ -1107,7 +1109,7 @@ export const LeftSidebar: React.FC = () => {
               >
                 <div className="flex items-center space-x-2">
                   <Cpu className="w-4 h-4 text-rose-400" />
-                  <span>Mô Hình Động Cơ (DC/BLDC/PMSM/IM)</span>
+                  <span>{t.manipulator.motorModelTitle}</span>
                 </div>
                 <span className="text-[10px] bg-rose-500/20 text-rose-200 px-2 py-0.5 rounded-md border border-rose-500/30 flex items-center space-x-1">
                   <span>500Hz</span>
@@ -1125,7 +1127,7 @@ export const LeftSidebar: React.FC = () => {
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  Đồng Bộ (Master)
+                  {t.manipulator.masterSynchronous}
                 </button>
                 <button
                   onClick={() => setDynTuningMode('joints')}
@@ -1135,7 +1137,7 @@ export const LeftSidebar: React.FC = () => {
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  Từng Khớp ({robotModel.dof} Động Cơ)
+                  {t.manipulator.individualJointTuning} ({robotModel.dof})
                 </button>
               </div>
 
@@ -1144,7 +1146,7 @@ export const LeftSidebar: React.FC = () => {
                 <div className="space-y-2 pt-1">
                   <div className="space-y-1">
                     <div className="flex justify-between text-[11px] font-mono">
-                      <span className="text-slate-400">Tỷ lệ Độ cứng Vị trí Kp:</span>
+                      <span className="text-slate-400">{t.manipulator.kpScale}</span>
                       <span className="text-sky-400 font-bold">
                         {Math.round(((dynamicsSettings.gains.kp[0] || 120) / (activeDynamicsProfile?.joints[0]?.kp || 120)) * 100)}%
                       </span>
@@ -1165,7 +1167,7 @@ export const LeftSidebar: React.FC = () => {
 
                   <div className="space-y-1">
                     <div className="flex justify-between text-[11px] font-mono">
-                      <span className="text-slate-400">Tỷ lệ Cản Vận tốc Kd:</span>
+                      <span className="text-slate-400">{t.manipulator.kdScale}</span>
                       <span className="text-purple-400 font-bold">
                         {Math.round(((dynamicsSettings.gains.kd[0] || 20) / (activeDynamicsProfile?.joints[0]?.kd || 20)) * 100)}%
                       </span>
@@ -1187,7 +1189,7 @@ export const LeftSidebar: React.FC = () => {
                   {/* Summary Joint Table */}
                   <div className="mt-2 bg-slate-900/60 rounded-lg p-2 border border-slate-850 space-y-1">
                     <div className="grid grid-cols-4 text-[9px] font-mono text-slate-500 border-b border-slate-800 pb-1">
-                      <span>Khớp</span>
+                      <span>{t.manipulator.jointColumn}</span>
                       <span className="text-center">Kp</span>
                       <span className="text-center">Kd</span>
                       <span className="text-right">τ_max</span>
@@ -1250,7 +1252,7 @@ export const LeftSidebar: React.FC = () => {
                             {/* Kp Slider */}
                             <div className="space-y-1">
                               <div className="flex justify-between">
-                                <span className="text-slate-400">Độ cứng Kp:</span>
+                                <span className="text-slate-400">{t.manipulator.jointKp}</span>
                                 <input
                                   type="number"
                                   value={curKp}
@@ -1274,7 +1276,7 @@ export const LeftSidebar: React.FC = () => {
                             {/* Kd Slider */}
                             <div className="space-y-1">
                               <div className="flex justify-between">
-                                <span className="text-slate-400">Độ cản Kd:</span>
+                                <span className="text-slate-400">{t.manipulator.jointKd}</span>
                                 <input
                                   type="number"
                                   value={curKd}
@@ -1298,7 +1300,7 @@ export const LeftSidebar: React.FC = () => {
                             {/* Max Torque Limit */}
                             <div className="space-y-1 pt-1 border-t border-slate-800">
                               <div className="flex justify-between">
-                                <span className="text-slate-400">Momen Đỉnh τ_max:</span>
+                                <span className="text-slate-400">{t.manipulator.peakTorque}</span>
                                 <span className="text-amber-400 font-bold">{jCfg.maxTorque} N·m</span>
                               </div>
                               <input
@@ -1317,7 +1319,7 @@ export const LeftSidebar: React.FC = () => {
                             {/* Friction params */}
                             <div className="grid grid-cols-2 gap-2 text-[9px] text-slate-400 pt-1">
                               <div>
-                                <span>Ma sát nhớt (b_v):</span>
+                                <span>{t.manipulator.viscousFriction}</span>
                                 <input
                                   type="number"
                                   step="0.001"
@@ -1329,7 +1331,7 @@ export const LeftSidebar: React.FC = () => {
                                 />
                               </div>
                               <div>
-                                <span>Ma sát Coulomb (b_c):</span>
+                                <span>{t.manipulator.coulombFriction}</span>
                                 <input
                                   type="number"
                                   step="0.05"
@@ -1344,7 +1346,7 @@ export const LeftSidebar: React.FC = () => {
 
                             {/* Motor Drive Architecture quick button */}
                             <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
-                              <span className="text-[9px] text-slate-400">Động cơ:</span>
+                              <span className="text-[9px] text-slate-400">{t.manipulator.motorTypeLabel}</span>
                               <button
                                 onClick={() => {
                                   setMotorModalJointIdx(idx);
@@ -1353,7 +1355,7 @@ export const LeftSidebar: React.FC = () => {
                                 className="px-2 py-0.5 rounded bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 text-[9px] font-mono font-bold uppercase transition flex items-center space-x-1"
                               >
                                 <span>{jCfg.motorParams?.type || 'PMSM'}</span>
-                                <span className="text-slate-400 font-normal">(Cấu hình...)</span>
+                                <span className="text-slate-400 font-normal">{t.manipulator.motorConfigBtn}</span>
                               </button>
                             </div>
                           </div>
@@ -1371,7 +1373,7 @@ export const LeftSidebar: React.FC = () => {
               className="w-full flex items-center justify-center space-x-2 py-2.5 px-3 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 text-xs font-mono font-bold transition shadow"
             >
               <Zap className="w-4 h-4 text-amber-400" />
-              <span>Xem Dao động ký Mô-men τ(t)</span>
+              <span>{t.manipulator.viewTorqueOscilloscope}</span>
             </button>
           </div>
         )}

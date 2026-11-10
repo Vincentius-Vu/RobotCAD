@@ -1,5 +1,6 @@
 import React from 'react';
 import { useRobotStore } from '../../store/robotStore';
+import { useTranslation } from '../../i18n';
 import { RightInspectorTab } from '../../types/ui';
 import { DHTable } from '../../components/UI/DHTable';
 import { MobileRobotTelemetry } from '../RightSidebar/MobileRobotTelemetry';
@@ -16,6 +17,7 @@ import {
 } from 'lucide-react';
 
 export const RightInspector: React.FC = () => {
+  const { t, language } = useTranslation();
   const {
     activeDomain,
     isRightInspectorOpen,
@@ -122,10 +124,21 @@ export const RightInspector: React.FC = () => {
                 T = Rot_z(θ) · Trans_z(d) · Trans_x(a) · Rot_x(α)
               </p>
               <div className="text-[10px] text-slate-500 space-y-1 font-mono pt-1 border-t border-slate-800">
-                <p>• <b>θ</b>: Góc quay quanh trục Z_(i-1) (Góc khớp biến thiên)</p>
-                <p>• <b>d</b>: Khoảng cách dịch chuyển dọc Z_(i-1) (Link offset)</p>
-                <p>• <b>a</b>: Khoảng cách giữa Z_(i-1) và Z_i dọc X_i (Link length)</p>
-                <p>• <b>α</b>: Góc xoay giữa Z_(i-1) và Z_i quanh X_i (Link twist)</p>
+                {language === 'vi' ? (
+                  <>
+                    <p>• <b>θ</b>: Góc quay quanh trục Z_(i-1) (Góc khớp biến thiên)</p>
+                    <p>• <b>d</b>: Khoảng cách dịch chuyển dọc Z_(i-1) (Link offset)</p>
+                    <p>• <b>a</b>: Khoảng cách giữa Z_(i-1) và Z_i dọc X_i (Link length)</p>
+                    <p>• <b>α</b>: Góc xoay giữa Z_(i-1) và Z_i quanh X_i (Link twist)</p>
+                  </>
+                ) : (
+                  <>
+                    <p>• <b>θ</b>: Joint angle about Z_(i-1) axis (Variable joint displacement)</p>
+                    <p>• <b>d</b>: Joint distance offset along Z_(i-1) (Link offset)</p>
+                    <p>• <b>a</b>: Normal distance between Z_(i-1) and Z_i along X_i (Link length)</p>
+                    <p>• <b>α</b>: Twist angle between Z_(i-1) and Z_i about X_i (Link twist)</p>
+                  </>
+                )}
               </div>
             </div>
 
@@ -134,7 +147,7 @@ export const RightInspector: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-mono font-semibold text-slate-300 flex items-center space-x-1.5">
                   <Info className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Chế độ Khung xương (Skeleton Mode):</span>
+                  <span>{t.inspector.skeletonMode}</span>
                 </span>
                 <button
                   onClick={() => toggleOverlay('showSkeleton')}
@@ -144,7 +157,7 @@ export const RightInspector: React.FC = () => {
                       : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
                   }`}
                 >
-                  {overlays.showSkeleton ? 'BẬT' : 'TẮT'}
+                  {overlays.showSkeleton ? t.common.on : t.common.off}
                 </button>
               </div>
 
@@ -157,7 +170,7 @@ export const RightInspector: React.FC = () => {
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  Cơ học (Physical)
+                  {t.inspector.skeletonPhysical}
                 </button>
                 <button
                   onClick={() => setSkeletonMode('dh')}
@@ -167,23 +180,19 @@ export const RightInspector: React.FC = () => {
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  Toán học (D-H)
+                  {t.inspector.skeletonDH}
                 </button>
               </div>
 
               {robotModel.id === 'Puma560' && (
                 <div className="text-[10px] leading-relaxed text-slate-400 bg-sky-950/30 border border-sky-900/50 rounded-lg p-2.5 space-y-1.5 font-mono">
                   <div className="text-sky-300 font-semibold flex items-center space-x-1">
-                    <span>💡 Phân tích sư phạm cấu trúc PUMA 560:</span>
+                    <span>{t.inspector.dhPedagogyTitle}</span>
                   </div>
-                  <p>
-                    • <b>Bảng D-H toán học</b>: Khâu 2 có d₂ = 0, Khâu 3 có d₃ = 150 mm. Do đó gốc {'{2}'} nằm ở mặt phẳng trung tâm (y = 0), gây cảm giác xương Khâu 2 bị trôi ra khỏi thân 3D và có thanh ngang ảo ở cùi chỏ.
-                  </p>
-                  <p>
-                    • <b>Cơ học chế tạo thực tế</b>: Khớp vai của thân robot đã vươn ngang ra y = 150 mm (cần vươn shoulder boom của Khâu 1). Cánh tay trên (Link 2) chạy thẳng dọc theo thân mesh 3D từ vai đến cùi chỏ.
-                  </p>
+                  <p>{t.inspector.dhMathematicalText}</p>
+                  <p>{t.inspector.dhPhysicalText}</p>
                   <p className="text-emerald-400">
-                    ➔ <i>Chế độ <b>Cơ học</b> giúp người học hình dung chính xác đường truyền lực cơ khí.</i>
+                    <i>{t.inspector.dhInsightSummary}</i>
                   </p>
                 </div>
               )}
@@ -232,7 +241,7 @@ export const RightInspector: React.FC = () => {
                 {manipulabilityInfo.isNearSingularity && (
                   <div className="flex items-center space-x-2 bg-rose-500/15 border border-rose-500/30 rounded-lg p-2.5 text-rose-300 text-xs font-mono">
                     <AlertTriangle className="w-4 h-4 flex-shrink-0 text-rose-400" />
-                    <span>Singularity Detected! w(q) gần 0. Tránh di chuyển theo vector vận tốc Cartesian này.</span>
+                    <span>{t.inspector.singularityAlert}</span>
                   </div>
                 )}
               </div>
@@ -243,9 +252,9 @@ export const RightInspector: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-mono uppercase tracking-wider text-slate-400 font-semibold">
-                    Ma trận Jacobian [6 × {robotModel.dof}]
+                    {t.inspector.jacobianMatrixTitle.replace('{dof}', String(robotModel.dof))}
                   </span>
-                  <span className="text-[10px] font-mono text-sky-400">Thời gian thực</span>
+                  <span className="text-[10px] font-mono text-sky-400">{t.inspector.jacobianRealTime}</span>
                 </div>
 
                 <div className="overflow-x-auto rounded-lg border border-slate-800 bg-slate-950/80 p-2">
@@ -282,7 +291,7 @@ export const RightInspector: React.FC = () => {
                   </table>
                 </div>
                 <p className="text-[10px] text-slate-500 font-mono">
-                  3 dòng đầu: Vận tốc dài J_v; 3 dòng cuối: Vận tốc góc J_ω.
+                  {t.inspector.jacobianDescription}
                 </p>
               </div>
             )}
@@ -328,11 +337,10 @@ export const RightInspector: React.FC = () => {
 
             <div className="border border-slate-800 rounded-lg p-3 bg-slate-950/60 text-xs space-y-2">
               <span className="text-[11px] font-mono font-semibold text-slate-300 block">
-                Tổng quan kiến trúc:
+                {t.inspector.architectureOverview}
               </span>
               <p className="text-slate-400 leading-relaxed text-[11px]">
-                {robotModel.manufacturer} {robotModel.modelName} là dòng robot công nghiệp phổ biến trong giảng dạy và nghiên cứu động lực học.
-                Cấu trúc cổ tay hình cầu (Spherical Wrist) cho phép tách rời bài toán vị trí (Position Decoupling) và hướng (Orientation).
+                {robotModel.manufacturer} {robotModel.modelName} {t.inspector.pumaOverviewText}
               </p>
             </div>
           </div>

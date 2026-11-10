@@ -1,3 +1,4 @@
+import { useTranslation } from '../../i18n';
 import React from 'react';
 import { useRobotStore } from '../../store/robotStore';
 import { BackgroundTheme } from '../../types/robot';
@@ -17,6 +18,8 @@ interface EnvironmentCameraPanelProps {
 }
 
 export const EnvironmentCameraPanel: React.FC<EnvironmentCameraPanelProps> = ({ isOpen, onClose }) => {
+  const { language } = useTranslation();
+  const isVi = language === 'vi';
   const {
     backgroundTheme,
     setBackgroundTheme,
@@ -83,7 +86,7 @@ export const EnvironmentCameraPanel: React.FC<EnvironmentCameraPanelProps> = ({ 
         {/* 1. Background Theme Presets */}
         <div>
           <label className="text-[11px] font-mono uppercase text-slate-400 tracking-wider block mb-2">
-            Background Theme (Sắc độ nền)
+            {language === 'vi' ? 'Background Theme (Sắc độ nền)' : 'Viewport Background Theme'}
           </label>
           <div className="grid grid-cols-2 gap-2">
             {themes.map((t) => {
@@ -120,7 +123,7 @@ export const EnvironmentCameraPanel: React.FC<EnvironmentCameraPanelProps> = ({ 
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-[11px] font-mono uppercase text-slate-400 tracking-wider flex items-center space-x-1.5">
                 <Camera className="w-3.5 h-3.5 text-sky-400" />
-                <span>Camera FOV (Góc mở ống kính)</span>
+                <span>{language === 'vi' ? 'Camera FOV (Góc mở ống kính)' : 'Camera Field of View (FOV)'}</span>
               </label>
               <span className="text-xs font-mono font-bold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20">
                 {cameraSettings.fov}°
@@ -163,7 +166,7 @@ export const EnvironmentCameraPanel: React.FC<EnvironmentCameraPanelProps> = ({ 
           {/* Camera Elevation Angle */}
           <div className="space-y-1">
             <div className="flex justify-between text-xs font-mono">
-              <span className="text-slate-300">Camera Elevation (Góc ngẩng):</span>
+              <span className="text-slate-300">{language === 'vi' ? 'Camera Elevation (Góc ngẩng):' : 'Camera Elevation Angle:'}</span>
               <span className="text-sky-400">{Math.round(cameraSettings.elevationDeg)}°</span>
             </div>
             <input
@@ -180,7 +183,7 @@ export const EnvironmentCameraPanel: React.FC<EnvironmentCameraPanelProps> = ({ 
           {/* Camera Azimuth Angle */}
           <div className="space-y-1">
             <div className="flex justify-between text-xs font-mono">
-              <span className="text-slate-300">Camera Azimuth (Góc quay quanh):</span>
+              <span className="text-slate-300">{language === 'vi' ? 'Camera Azimuth (Góc quay quanh):' : 'Camera Orbit Azimuth:'}</span>
               <span className="text-sky-400">{Math.round(cameraSettings.azimuthDeg)}°</span>
             </div>
             <input
@@ -197,7 +200,7 @@ export const EnvironmentCameraPanel: React.FC<EnvironmentCameraPanelProps> = ({ 
           {/* Camera Distance / Zoom */}
           <div className="space-y-1">
             <div className="flex justify-between text-xs font-mono">
-              <span className="text-slate-300">Distance / Zoom (Khoảng cách):</span>
+              <span className="text-slate-300">{language === 'vi' ? 'Distance / Zoom (Khoảng cách):' : 'Camera Distance / Zoom:'}</span>
               <span className="text-sky-400">{Math.round(cameraSettings.distance)} mm</span>
             </div>
             <input
@@ -218,13 +221,13 @@ export const EnvironmentCameraPanel: React.FC<EnvironmentCameraPanelProps> = ({ 
         <div className="space-y-3">
           <label className="text-[11px] font-mono uppercase text-slate-400 tracking-wider flex items-center space-x-1.5">
             <Sun className="w-3.5 h-3.5 text-amber-400" />
-            <span>Lighting & Shadows (Cường độ & Hướng sáng)</span>
+            <span>{language === 'vi' ? 'Lighting & Shadows (Cường độ & Hướng sáng)' : 'Studio Lighting & Shadow Cast'}</span>
           </label>
 
           {/* Light Azimuth / Direction */}
           <div className="space-y-1">
             <div className="flex justify-between text-xs font-mono">
-              <span className="text-slate-300">Light Direction (Góc hướng đèn chiếu):</span>
+              <span className="text-slate-300">{language === 'vi' ? 'Light Direction (Góc hướng đèn chiếu):' : 'Key Light Direction Azimuth:'}</span>
               <span className="text-amber-400">{Math.round(lighting.lightAzimuthDeg)}°</span>
             </div>
             <input
@@ -241,7 +244,7 @@ export const EnvironmentCameraPanel: React.FC<EnvironmentCameraPanelProps> = ({ 
           {/* Ambient Light */}
           <div className="space-y-1">
             <div className="flex justify-between text-xs font-mono">
-              <span className="text-slate-300">Ambient Fill (Ánh sáng tán xạ):</span>
+              <span className="text-slate-300">{isVi ? "Ambient Fill (Ánh sáng tán xạ):" : "Ambient Fill Intensity:"}</span>
               <span className="text-sky-400">{lighting.ambientIntensity.toFixed(2)}</span>
             </div>
             <input
@@ -258,7 +261,7 @@ export const EnvironmentCameraPanel: React.FC<EnvironmentCameraPanelProps> = ({ 
           {/* Key Light */}
           <div className="space-y-1">
             <div className="flex justify-between text-xs font-mono">
-              <span className="text-slate-300">Key Direct Light (Đèn chiếu chính):</span>
+              <span className="text-slate-300">{isVi ? "Key Direct Light (Đèn chiếu chính):" : "Key Direct Light Intensity:"}</span>
               <span className="text-amber-400">{lighting.keyLightIntensity.toFixed(2)}</span>
             </div>
             <input
@@ -275,7 +278,7 @@ export const EnvironmentCameraPanel: React.FC<EnvironmentCameraPanelProps> = ({ 
           {/* Rim Accent Light */}
           <div className="space-y-1">
             <div className="flex justify-between text-xs font-mono">
-              <span className="text-slate-300">Rim Accent Light (Đèn viền khối):</span>
+              <span className="text-slate-300">{isVi ? "Rim Accent Light (Đèn viền khối):" : "Rim Accent Light Intensity:"}</span>
               <span className="text-cyan-400">{lighting.rimLightIntensity.toFixed(2)}</span>
             </div>
             <input
@@ -292,7 +295,7 @@ export const EnvironmentCameraPanel: React.FC<EnvironmentCameraPanelProps> = ({ 
           {/* Floor Shadow Opacity */}
           <div className="space-y-1">
             <div className="flex justify-between text-xs font-mono">
-              <span className="text-slate-300">Ground Shadow (Độ đậm bóng sàn):</span>
+              <span className="text-slate-300">{isVi ? "Ground Shadow (Độ đậm bóng sàn):" : "Ground Shadow Darkness:"}</span>
               <span className="text-slate-400">{Math.round(lighting.shadowOpacity * 100)}%</span>
             </div>
             <input
@@ -313,30 +316,30 @@ export const EnvironmentCameraPanel: React.FC<EnvironmentCameraPanelProps> = ({ 
         <div className="space-y-2">
           <label className="text-[11px] font-mono uppercase text-slate-400 tracking-wider flex items-center space-x-1.5">
             <Download className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Chụp & Xuất ảnh Sách / Bài giảng (High-Res 2X)</span>
+            <span>{isVi ? 'Chụp & Xuất ảnh Sách / Bài giảng (High-Res 2X)' : 'High-Res 2X Snapshot for Book / Paper'}</span>
           </label>
 
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => triggerCapture('white')}
               className="flex items-center space-x-2 px-3 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 shadow text-xs font-semibold transition text-left"
-              title="Xuất ảnh nền trắng tinh khiết độ phân giải cao phục vụ chèn vào tài liệu LaTeX/Word"
+              title={isVi ? "Xuất ảnh nền trắng tinh khiết độ phân giải cao phục vụ chèn vào tài liệu LaTeX/Word" : "Export high-resolution pure white background for LaTeX / Word papers"}
             >
               <FileImage className="w-4 h-4 text-sky-600 flex-shrink-0" />
               <div>
-                <span className="block leading-tight">Nền trắng</span>
-                <span className="text-[10px] text-slate-500 font-normal">Cho Sách / LaTeX</span>
+                <span className="block leading-tight">{isVi ? "Nền trắng" : "Paper White"}</span>
+                <span className="text-[10px] text-slate-500 font-normal">{isVi ? "Cho Sách / LaTeX" : "For Book / LaTeX"}</span>
               </div>
             </button>
 
             <button
               onClick={() => triggerCapture('transparent')}
               className="flex items-center space-x-2 px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 shadow text-xs font-semibold transition text-left"
-              title="Xuất ảnh PNG trong suốt (Transparent Alpha), không nền"
+              title={isVi ? "Xuất ảnh PNG trong suốt (Transparent Alpha), không nền" : "Export transparent PNG without background"}
             >
               <Download className="w-4 h-4 text-emerald-400 flex-shrink-0" />
               <div>
-                <span className="block leading-tight">Nền trong suốt</span>
+                <span className="block leading-tight">{isVi ? "Nền trong suốt" : "Transparent"}</span>
                 <span className="text-[10px] text-slate-400 font-normal">Alpha PNG</span>
               </div>
             </button>
@@ -347,7 +350,7 @@ export const EnvironmentCameraPanel: React.FC<EnvironmentCameraPanelProps> = ({ 
             className="w-full py-2 px-3 rounded-lg bg-slate-800/80 hover:bg-slate-800 text-slate-300 border border-slate-700 text-xs font-medium transition flex items-center justify-center space-x-1.5"
           >
             <Camera className="w-3.5 h-3.5" />
-            <span>Chụp nguyên trạng góc nhìn hiện tại</span>
+            <span>{isVi ? 'Chụp nguyên trạng góc nhìn hiện tại' : 'Snapshot current viewport angle'}</span>
           </button>
         </div>
       </div>

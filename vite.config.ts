@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 
 export default defineConfig(({ command }) => ({
-  base: command === 'serve' ? '/' : '/RobotCAD/',
+  base: command === 'serve' ? '/' : (process.env.VITE_BASE_PATH || '/RobotCAD/'),
   plugins: [
     react(),
     {

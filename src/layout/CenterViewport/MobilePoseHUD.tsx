@@ -1,9 +1,11 @@
 import React from 'react';
 import { useMobileRobotStore } from '../../store/mobileRobotStore';
+import { useTranslation } from '../../i18n';
 import { Compass, Navigation } from 'lucide-react';
 
 export const MobilePoseHUD: React.FC = () => {
   const { pose, velocity, isNavigating, specs } = useMobileRobotStore();
+  const { t } = useTranslation();
 
   const thetaDeg = Number(((pose.thetaRad * 180) / Math.PI).toFixed(1));
 
@@ -45,7 +47,7 @@ export const MobilePoseHUD: React.FC = () => {
           <div className="h-3.5 w-px bg-slate-800" />
           <div className="flex items-center space-x-1 px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] animate-pulse">
             <Navigation className="w-3 h-3 text-emerald-400" />
-            <span>Tự hành A*</span>
+            <span>{t.modals.autonomousAStar}</span>
           </div>
         </>
       )}

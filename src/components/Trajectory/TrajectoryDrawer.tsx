@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useRobotStore } from '../../store/robotStore';
+import { useTranslation } from '../../i18n';
 import { TrajectoryPlanner } from '../../kinematics/TrajectoryPlanner';
 import { MotionProfilePlots } from './MotionProfilePlots';
 import { TrajectoryExportModal } from '../UI/TrajectoryExportModal';
@@ -18,6 +19,8 @@ import {
 } from 'lucide-react';
 
 export const TrajectoryDrawer: React.FC = () => {
+  const { language } = useTranslation();
+  const isVi = language === 'vi';
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const {
     isTrajectoryDrawerOpen,
@@ -143,7 +146,7 @@ export const TrajectoryDrawer: React.FC = () => {
               <button
                 onClick={() => openAddPoseModal()}
                 className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-medium transition shadow"
-                title="Thêm Pose mới với Vị trí X/Y/Z, Hướng Roll/Pitch/Yaw và Thời gian dự kiến"
+                title={isVi ? "Thêm Pose mới với Vị trí X/Y/Z, Hướng Roll/Pitch/Yaw và Thời gian dự kiến" : "Add new Pose with X/Y/Z Position, Roll/Pitch/Yaw Orientation and Desired Timestamp"}
               >
                 <Plus className="w-3 h-3" />
                 <span>+ Add Pose</span>
@@ -151,9 +154,9 @@ export const TrajectoryDrawer: React.FC = () => {
               <button
                 onClick={() => addWaypointFromCurrent()}
                 className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 text-[11px] font-medium transition"
-                title="Lấy nhanh tư thế hiện tại"
+                title={isVi ? "Lấy nhanh tư thế hiện tại" : "Quick capture current manipulator pose"}
               >
-                Lấy hiện tại
+                {isVi ? 'Lấy hiện tại' : 'Get Current'}
               </button>
               <button
                 onClick={clearWaypoints}

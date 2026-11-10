@@ -128,22 +128,13 @@ RobotCAD/
 
 ## 📜 How to Cite (Trích dẫn Khoa học)
 
-Nếu bạn sử dụng **RobotCAD**, mô hình toán học giải tích hoặc bộ số liệu đối chuẩn trong các công trình nghiên cứu, bài báo khoa học, luận văn hoặc tài liệu giảng dạy, vui lòng trích dẫn theo định dạng sau:
+Nếu bạn sử dụng **RobotCAD** trong các công trình nghiên cứu, bài báo khoa học, luận văn hoặc tài liệu giảng dạy, vui lòng trích dẫn phần mềm theo định dạng sau:
 
 ### APA Format
-> Vu, T.-V. (2026). *Deterministic Machine-Precision Cross-Validation and Real-Time Edge Simulation of an All-Analytical Digital Twin for Dual-PMSM Wheeled Mobile Robots: A Tri-Platform Comparative Study across C++, Python, and MATLAB*. Acta Mechanica et Automatica. https://github.com/Vincentius-Vu/RobotCAD
+> Vu, T.-V. (2026). *RobotCAD: 3D Industrial Robotics Kinematics, Dynamics & Multiphysics Studio* (Version 1.0.0) [Computer software]. GitHub. https://github.com/Vincentius-Vu/RobotCAD
 
 ### BibTeX
 ```bibtex
-@article{Vu2026RobotCAD,
-  author    = {Vu, Tri-Vien},
-  title     = {Deterministic Machine-Precision Cross-Validation and Real-Time Edge Simulation of an All-Analytical Digital Twin for Dual-PMSM Wheeled Mobile Robots: A Tri-Platform Comparative Study across C++, Python, and MATLAB},
-  journal   = {Acta Mechanica et Automatica},
-  year      = {2026},
-  publisher = {Bia{\l}ystok University of Technology},
-  url       = {https://github.com/Vincentius-Vu/RobotCAD}
-}
-
 @software{RobotCADStudio2026,
   author    = {Vu, Tri-Vien},
   title     = {RobotCAD: 3D Industrial Robotics Kinematics, Dynamics & Multiphysics Studio},

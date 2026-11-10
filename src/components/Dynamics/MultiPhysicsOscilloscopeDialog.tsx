@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { useRobotStore } from '../../store/robotStore';
+import { useTranslation } from '../../i18n';
 import { MobileRobotOscilloscope } from './MobileRobotOscilloscope';
 import {
   Activity,
@@ -28,6 +29,8 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
   isOpen,
   onClose,
 }) => {
+  const { t, language } = useTranslation();
+  const isVi = language === 'vi';
   const {
     activeDomain,
     robotModel,
@@ -89,11 +92,11 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
     );
 
     if (!popout) {
-      alert('Trình duyệt đã chặn cửa sổ pop-up. Vui lòng cho phép pop-up để mở đồ thị trên màn hình thứ hai.');
+      alert(language === 'vi' ? 'Trình duyệt đã chặn cửa sổ pop-up. Vui lòng cho phép pop-up để mở đồ thị trên màn hình thứ hai.' : 'Browser blocked pop-up window. Please allow pop-ups to open oscilloscope on secondary monitor.');
       return;
     }
 
-    popout.document.title = 'RoboCAD 3D • Multi-Physics Telemetry Oscilloscope (Đa Màn Hình)';
+    popout.document.title = language === 'vi' ? 'RoboCAD 3D • Multi-Physics Telemetry Oscilloscope (Đa Màn Hình)' : 'RoboCAD 3D • Multi-Physics Telemetry Oscilloscope (Pop-out Window)';
 
     // Copy all parent stylesheets into child window for full Tailwind support
     document.querySelectorAll('link[rel="stylesheet"], style').forEach((node) => {
@@ -190,7 +193,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
     if (!hasData) {
       return (
         <div className="w-full h-48 flex items-center justify-center bg-slate-950/80 rounded-xl border border-slate-800 text-slate-500 font-mono text-xs">
-          Chưa có dữ liệu chuỗi thời gian. Hãy nhấn &quot;Mô phỏng&quot; hoặc &quot;Phát quỹ đạo&quot; để ghi nhận tín hiệu.
+          {language === 'vi' ? 'Chưa có dữ liệu chuỗi thời gian. Hãy nhấn "Mô phỏng" hoặc "Phát quỹ đạo" để ghi nhận tín hiệu.' : 'No time-series data recorded. Press "Simulate" or "Play Trajectory" to capture waveforms.'}
         </div>
       );
     }
@@ -470,14 +473,14 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
           <div>
             <div className="flex items-center space-x-2">
               <span className="text-sm font-bold text-slate-100">
-                Bộ Dao Động Ký & Phân Tích Vật Lý Đa Miền
+                {language === 'vi' ? 'Bộ Dao Động Ký & Phân Tích Vật Lý Đa Miền' : 'Multi-Physics Telemetry & Oscilloscope Studio'}
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold">
                 Multi-Physics Scope (500 Hz RK4 + 10 kHz FOC)
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              Quan sát thời gian thực: Động học, Mô-men RNE, Dòng điện Stator Iq, Điện áp Bus DC & Nhiệt độ Biến tần
+              {language === 'vi' ? 'Quan sát thời gian thực: Động học, Mô-men RNE, Dòng điện Stator Iq, Điện áp Bus DC & Nhiệt độ Biến tần' : 'Real-time observation: Kinematics, RNE Torques, Stator Current Iq, DC-Bus Voltage & Inverter Dynamics'}
             </p>
           </div>
         </div>
@@ -489,19 +492,19 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
             <button
               onClick={handleOpenPopout}
               className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/30 text-xs font-mono font-medium transition shadow-sm"
-              title="Mở cửa sổ đồ thị rời ra màn hình thứ hai (Multi-Monitor Pop-out)"
+              title={language === 'vi' ? 'Mở cửa sổ đồ thị rời ra màn hình thứ hai (Multi-Monitor Pop-out)' : 'Pop-out to separate window for multi-monitor inspection'}
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>Mở Cửa Sổ Rời (Đa Màn Hình)</span>
+              <span>{language === 'vi' ? 'Mở Cửa Sổ Rời (Đa Màn Hình)' : 'Pop-out Window'}</span>
             </button>
           ) : (
             <button
               onClick={handleClosePopout}
               className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-medium transition shadow-sm"
-              title="Thu về cửa sổ chính"
+              title={language === 'vi' ? 'Thu về cửa sổ chính' : 'Dock back to main window'}
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>Gắn lại Cửa Sổ Chính</span>
+              <span>{language === 'vi' ? 'Gắn lại Cửa Sổ Chính' : 'Dock to Main'}</span>
             </button>
           )}
 
@@ -518,7 +521,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition"
-            title="Đóng cửa sổ đồ thị"
+            title={t.common.close}
           >
             <X className="w-4 h-4" />
           </button>
@@ -538,7 +541,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
             }`}
           >
             <Cpu className="w-3.5 h-3.5 text-purple-400" />
-            <span>Động Cơ & Dòng Điện (I_q, RPM, P)</span>
+            <span>{language === 'vi' ? 'Động Cơ & Dòng Điện (I_q, RPM, P)' : 'Motor Currents & Power (I_q, RPM, P)'}</span>
           </button>
 
           <button
@@ -574,7 +577,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
             }`}
           >
             <Activity className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Động Học (Góc q, Vận tốc, Gia tốc)</span>
+            <span>{isVi ? 'Động Học (Góc q, Vận tốc, Gia tốc)' : 'Kinematics (Position q, Velocity, Accel)'}</span>
           </button>
 
           <button
@@ -638,7 +641,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
             </div>
 
             {renderSVGChart(
-              'Dòng điện Pha Stator I_q(t) [A] (Dòng tạo mô-men từ)',
+              isVi ? 'Dòng điện Pha Stator I_q(t) [A] (Dòng tạo mô-men từ)' : 'Stator Phase Current I_q(t) [A] (Torque Producing Current)',
               'A',
               'I_q [A]',
               (s, j) => s.motorStates?.[j]?.currentA || (s.tau?.[j] ? s.tau[j] / 12.0 : 0)
@@ -676,7 +679,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
             </div>
 
             {renderSVGChart(
-              'Điện áp Bus DC Dùng chung V_dc(t) [V] (Tụ bù 4700 µF)',
+              isVi ? 'Điện áp Bus DC Dùng chung V_dc(t) [V] (Tụ bù 4700 µF)' : 'Shared DC-Bus Voltage V_dc(t) [V] (4700 µF Cap Bank)',
               'V',
               'V_dc [V]',
               (s) => s.dcBusState?.voltageV || 48.0,
@@ -750,7 +753,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
             )}
 
             {renderSVGChart(
-              'Vận tốc Góc Khớp qdot_i(t) [deg/s]',
+              isVi ? 'Vận tốc Góc Khớp qdot_i(t) [deg/s]' : 'Joint Angular Velocities dq/dt [deg/s]',
               '°/s',
               'Velocity [°/s]',
               (s, j) => s.qdDeg?.[j] || 0
@@ -884,7 +887,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              Quan sát thời gian thực: Vận tốc Thân xe, Dual-PMSM dq, Lực kéo Lốp Pacejka, Tải trọng Pháp tuyến Fz, Bánh Caster & Tư thế 3D
+              {isVi ? 'Quan sát thời gian thực: Vận tốc Thân xe, Dual-PMSM dq, Lực kéo Lốp Pacejka, Tải trọng Pháp tuyến Fz, Bánh Caster & Tư thế 3D' : 'Real-time observation: Chassis Velocities, Dual-PMSM dq, Pacejka Traction, Dynamic Normal Loads Fz, Caster Dynamics & 3D Attitude'}
             </p>
           </div>
         </div>
@@ -895,19 +898,19 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
             <button
               onClick={handleOpenPopout}
               className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/30 text-xs font-mono font-medium transition shadow-sm"
-              title="Mở cửa sổ đồ thị rời ra màn hình thứ hai (Multi-Monitor Pop-out)"
+              title={language === 'vi' ? 'Mở cửa sổ đồ thị rời ra màn hình thứ hai (Multi-Monitor Pop-out)' : 'Pop-out to separate window for multi-monitor inspection'}
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>Mở Cửa Sổ Rời (Đa Màn Hình)</span>
+              <span>{language === 'vi' ? 'Mở Cửa Sổ Rời (Đa Màn Hình)' : 'Pop-out Window'}</span>
             </button>
           ) : (
             <button
               onClick={handleClosePopout}
               className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-medium transition shadow-sm"
-              title="Thu về cửa sổ chính"
+              title={language === 'vi' ? 'Thu về cửa sổ chính' : 'Dock back to main window'}
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>Gắn lại Cửa Sổ Chính</span>
+              <span>{language === 'vi' ? 'Gắn lại Cửa Sổ Chính' : 'Dock to Main'}</span>
             </button>
           )}
 
@@ -924,7 +927,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition"
-            title="Đóng cửa sổ đồ thị"
+            title={t.common.close}
           >
             <X className="w-4 h-4" />
           </button>

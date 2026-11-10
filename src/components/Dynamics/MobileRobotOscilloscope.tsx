@@ -1,3 +1,4 @@
+import { useTranslation } from '../../i18n';
 import React, { useState, useRef } from 'react';
 import { useMobileRobotStore, AGVHistoryPoint } from '../../store/mobileRobotStore';
 import {
@@ -18,6 +19,8 @@ interface MobileRobotOscilloscopeProps {
 }
 
 export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = () => {
+  const { language } = useTranslation();
+  const isVi = language === 'vi';
   const {
     agvHistory,
     isLiveRecording,
@@ -265,7 +268,7 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
             }`}
           >
             <Gauge className="w-3.5 h-3.5 text-sky-400" />
-            <span>Vận tốc & Bánh xe</span>
+            <span>{isVi ? 'Vận tốc & Bánh xe' : 'Velocities & Wheels'}</span>
           </button>
 
           <button
@@ -289,7 +292,7 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
             }`}
           >
             <Activity className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Lốp Pacejka & Tải Fz</span>
+            <span>{isVi ? 'Lốp Pacejka & Tải Fz' : 'Pacejka Tire & Normal Fz'}</span>
           </button>
 
           <button
@@ -301,7 +304,7 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
             }`}
           >
             <Waves className="w-3.5 h-3.5 text-purple-400" />
-            <span>Bánh Caster & Tư thế 3D</span>
+            <span>{isVi ? 'Bánh Caster & Tư thế 3D' : 'Caster & 3D Attitude'}</span>
           </button>
 
           <button
@@ -376,26 +379,26 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
           <>
             {renderMultiLinePlot(
               [
-                { id: 'vx', label: 'Vận tốc tiến vx', unit: 'm/s', color: '#38bdf8', getValue: (p) => p.vx },
-                { id: 'wz', label: 'Vận tốc góc wz', unit: 'rad/s', color: '#f59e0b', getValue: (p) => p.wz },
+                { id: 'vx', label: isVi ? 'Vận tốc tiến vx' : 'Forward Velocity v_x', unit: 'm/s', color: '#38bdf8', getValue: (p) => p.vx },
+                { id: 'wz', label: isVi ? 'Vận tốc góc wz' : 'Yaw Rate w_z', unit: 'rad/s', color: '#f59e0b', getValue: (p) => p.wz },
               ],
-              '1. Vận tốc Thân xe (Chassis Forward & Angular Velocity)'
+              isVi ? '1. Vận tốc Thân xe (Chassis Forward & Angular Velocity)' : '1. Chassis Planar Velocities (Forward v_x & Yaw Rate w_z)'
             )}
 
             {renderMultiLinePlot(
               [
-                { id: 'vL', label: 'Bánh Trái vL', unit: 'm/s', color: '#3b82f6', getValue: (p) => p.vL },
-                { id: 'vR', label: 'Bánh Phải vR', unit: 'm/s', color: '#06b6d4', getValue: (p) => p.vR },
+                { id: 'vL', label: isVi ? 'Bánh Trái vL' : 'Left Wheel v_L', unit: 'm/s', color: '#3b82f6', getValue: (p) => p.vL },
+                { id: 'vR', label: isVi ? 'Bánh Phải vR' : 'Right Wheel v_R', unit: 'm/s', color: '#06b6d4', getValue: (p) => p.vR },
               ],
-              '2. Vận tốc Dài Mặt Lốp (Left vs Right Wheel Surface Velocity)'
+              isVi ? '2. Vận tốc Dài Mặt Lốp (Left vs Right Wheel Surface Velocity)' : '2. Wheel Surface Linear Velocities (Left v_L vs Right v_R)'
             )}
 
             {renderMultiLinePlot(
               [
-                { id: 'wL_rpm', label: 'Tốc độ Trái wL', unit: 'RPM', color: '#eab308', getValue: (p) => (p.omega_wL * 60) / (2 * Math.PI) },
-                { id: 'wR_rpm', label: 'Tốc độ Phải wR', unit: 'RPM', color: '#f97316', getValue: (p) => (p.omega_wR * 60) / (2 * Math.PI) },
+                { id: 'wL_rpm', label: isVi ? 'Tốc độ Trái wL' : 'Left RPM w_L', unit: 'RPM', color: '#eab308', getValue: (p) => (p.omega_wL * 60) / (2 * Math.PI) },
+                { id: 'wR_rpm', label: isVi ? 'Tốc độ Phải wR' : 'Right RPM w_R', unit: 'RPM', color: '#f97316', getValue: (p) => (p.omega_wR * 60) / (2 * Math.PI) },
               ],
-              '3. Tốc độ Góc Động cơ Bánh xe (Wheel Revolutions Per Minute)'
+              isVi ? '3. Tốc độ Góc Động cơ Bánh xe (Wheel Revolutions Per Minute)' : '3. Actuator Rotational Speed (Wheel RPM)'
             )}
           </>
         )}
@@ -405,28 +408,28 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
           <>
             {renderMultiLinePlot(
               [
-                { id: 'iq_L', label: 'Dòng iq Trái (Mô men)', unit: 'A', color: '#38bdf8', getValue: (p) => p.iq_L },
-                { id: 'iq_R', label: 'Dòng iq Phải (Mô men)', unit: 'A', color: '#06b6d4', getValue: (p) => p.iq_R },
-                { id: 'id_L', label: 'Dòng id Trái (Từ hóa)', unit: 'A', color: '#94a3b8', dash: '3 3', getValue: (p) => p.id_L },
-                { id: 'id_R', label: 'Dòng id Phải (Từ hóa)', unit: 'A', color: '#64748b', dash: '3 3', getValue: (p) => p.id_R },
+                { id: 'iq_L', label: isVi ? 'Dòng iq Trái (Mô men)' : 'Left Stator i_q (Torque)', unit: 'A', color: '#38bdf8', getValue: (p) => p.iq_L },
+                { id: 'iq_R', label: isVi ? 'Dòng iq Phải (Mô men)' : 'Right Stator i_q (Torque)', unit: 'A', color: '#06b6d4', getValue: (p) => p.iq_R },
+                { id: 'id_L', label: isVi ? 'Dòng id Trái (Từ hóa)' : 'Left Stator i_d (Flux)', unit: 'A', color: '#94a3b8', dash: '3 3', getValue: (p) => p.id_L },
+                { id: 'id_R', label: isVi ? 'Dòng id Phải (Từ hóa)' : 'Right Stator i_d (Flux)', unit: 'A', color: '#64748b', dash: '3 3', getValue: (p) => p.id_R },
               ],
-              '1. Dòng điện Stator Hệ tọa độ Quay d-q (Dual PMSM Stator Currents)'
+              isVi ? '1. Dòng điện Stator Hệ tọa độ Quay d-q (Dual PMSM Stator Currents)' : '1. Stator dq Current Dynamics (Dual PMSM: Torque i_q vs Flux i_d)'
             )}
 
             {renderMultiLinePlot(
               [
-                { id: 'Te_L', label: 'Mô men Trái Te_L', unit: 'Nm', color: '#10b981', getValue: (p) => p.Te_L },
-                { id: 'Te_R', label: 'Mô men Phải Te_R', unit: 'Nm', color: '#f59e0b', getValue: (p) => p.Te_R },
+                { id: 'Te_L', label: isVi ? 'Mô men Trái Te_L' : 'Left EM Torque Te_L', unit: 'Nm', color: '#10b981', getValue: (p) => p.Te_L },
+                { id: 'Te_R', label: isVi ? 'Mô men Phải Te_R' : 'Right EM Torque Te_R', unit: 'Nm', color: '#f59e0b', getValue: (p) => p.Te_R },
               ],
-              '2. Mô men Điện từ Trục Động cơ (Electromagnetic Drive Torques)'
+              isVi ? '2. Mô men Điện từ Trục Động cơ (Electromagnetic Drive Torques)' : '2. Shaft Electromagnetic Torques (Dual PMSM Drive: Te_L vs Te_R)'
             )}
 
             {renderMultiLinePlot(
               [
-                { id: 'Vdc', label: 'Điện áp Bus Vdc', unit: 'V', color: '#ec4899', getValue: (p) => p.Vdc },
-                { id: 'Ibatt', label: 'Dòng Pin Ibatt', unit: 'A', color: '#a855f7', getValue: (p) => p.Ibatt },
+                { id: 'Vdc', label: isVi ? 'Điện áp Bus Vdc' : 'DC-Link Bus Voltage Vdc', unit: 'V', color: '#ec4899', getValue: (p) => p.Vdc },
+                { id: 'Ibatt', label: isVi ? 'Dòng Pin Ibatt' : 'Battery Current Ibatt', unit: 'A', color: '#a855f7', getValue: (p) => p.Ibatt },
               ],
-              '3. Nguồn Cấp DC-Link & Dòng Pin (Capacitor Bus Voltage & Battery Current)'
+              isVi ? '3. Nguồn Cấp DC-Link & Dòng Pin (Capacitor Bus Voltage & Battery Current)' : '3. DC-Link Bus Capacitor Transient Voltage & Battery Current (V_dc, I_batt)'
             )}
           </>
         )}
@@ -436,28 +439,28 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
           <>
             {renderMultiLinePlot(
               [
-                { id: 'slip_L', label: 'Hệ số trượt Trái κ_L', unit: '%', color: '#38bdf8', getValue: (p) => p.slip_L * 100 },
-                { id: 'slip_R', label: 'Hệ số trượt Phải κ_R', unit: '%', color: '#f59e0b', getValue: (p) => p.slip_R * 100 },
+                { id: 'slip_L', label: isVi ? 'Hệ số trượt Trái κ_L' : 'Left Slip Ratio κ_L', unit: '%', color: '#38bdf8', getValue: (p) => p.slip_L * 100 },
+                { id: 'slip_R', label: isVi ? 'Hệ số trượt Phải κ_R' : 'Right Slip Ratio κ_R', unit: '%', color: '#f59e0b', getValue: (p) => p.slip_R * 100 },
               ],
-              '1. Độ Trượt Tiếp xúc Bánh xe (Pacejka Longitudinal Slip Ratio - Safe < 15%)'
+              isVi ? '1. Độ Trượt Tiếp xúc Bánh xe (Pacejka Longitudinal Slip Ratio - Safe < 15%)' : '1. Wheel Longitudinal Slip Ratio (Pacejka Kinematic Slip - Safe < 15%)'
             )}
 
             {renderMultiLinePlot(
               [
-                { id: 'Fx_L', label: 'Lực bám Trái Fx_L', unit: 'N', color: '#06b6d4', getValue: (p) => p.Fx_L },
-                { id: 'Fx_R', label: 'Lực bám Phải Fx_R', unit: 'N', color: '#f97316', getValue: (p) => p.Fx_R },
+                { id: 'Fx_L', label: isVi ? 'Lực bám Trái Fx_L' : 'Left Traction Fx_L', unit: 'N', color: '#06b6d4', getValue: (p) => p.Fx_L },
+                { id: 'Fx_R', label: isVi ? 'Lực bám Phải Fx_R' : 'Right Traction Fx_R', unit: 'N', color: '#f97316', getValue: (p) => p.Fx_R },
               ],
-              '2. Lực Kéo Tiếp xúc Tiếp tuyến (Pacejka Longitudinal Tractive Forces)'
+              isVi ? '2. Lực Kéo Tiếp xúc Tiếp tuyến (Pacejka Longitudinal Tractive Forces)' : '2. Longitudinal Traction Contact Forces (Pacejka Magic Formula F_x)'
             )}
 
             {renderMultiLinePlot(
               [
-                { id: 'Fz_L', label: 'Tải Bánh Trái Fz_L', unit: 'N', color: '#10b981', getValue: (p) => p.Fz_L },
-                { id: 'Fz_R', label: 'Tải Bánh Phải Fz_R', unit: 'N', color: '#eab308', getValue: (p) => p.Fz_R },
-                { id: 'Fz_cF', label: 'Tải Caster Trước Fz_cF', unit: 'N', color: '#06b6d4', getValue: (p) => p.Fz_cF },
-                { id: 'Fz_cR', label: 'Tải Caster Sau Fz_cR', unit: 'N', color: '#ec4899', getValue: (p) => p.Fz_cR },
+                { id: 'Fz_L', label: isVi ? 'Tải Bánh Trái Fz_L' : 'Left Load Fz_L', unit: 'N', color: '#10b981', getValue: (p) => p.Fz_L },
+                { id: 'Fz_R', label: isVi ? 'Tải Bánh Phải Fz_R' : 'Right Load Fz_R', unit: 'N', color: '#eab308', getValue: (p) => p.Fz_R },
+                { id: 'Fz_cF', label: isVi ? 'Tải Caster Trước Fz_cF' : 'Front Caster Load Fz_cF', unit: 'N', color: '#06b6d4', getValue: (p) => p.Fz_cF },
+                { id: 'Fz_cR', label: isVi ? 'Tải Caster Sau Fz_cR' : 'Rear Caster Load Fz_cR', unit: 'N', color: '#ec4899', getValue: (p) => p.Fz_cR },
               ],
-              '3. Tải trọng Pháp tuyến Động 4 Điểm (SSoT 4-Point Lateral & Longitudinal Normal Loads)'
+              isVi ? '3. Tải trọng Pháp tuyến Động 4 Điểm (SSoT 4-Point Lateral & Longitudinal Normal Loads)' : '3. Dynamic 4-Point Normal Contact Forces (SSoT F_z Distribution)'
             )}
           </>
         )}
@@ -467,26 +470,26 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
           <>
             {renderMultiLinePlot(
               [
-                { id: 'psi_cF', label: 'Góc Caster Trước ψ_cF', unit: '°', color: '#06b6d4', getValue: (p) => (p.psi_cF * 180) / Math.PI },
-                { id: 'psi_cR', label: 'Góc Caster Sau ψ_cR', unit: '°', color: '#38bdf8', getValue: (p) => (p.psi_cR * 180) / Math.PI },
+                { id: 'psi_cF', label: isVi ? 'Góc Caster Trước ψ_cF' : 'Front Caster Angle ψ_cF', unit: '°', color: '#06b6d4', getValue: (p) => (p.psi_cF * 180) / Math.PI },
+                { id: 'psi_cR', label: isVi ? 'Góc Caster Sau ψ_cR' : 'Rear Caster Angle ψ_cR', unit: '°', color: '#38bdf8', getValue: (p) => (p.psi_cR * 180) / Math.PI },
               ],
-              '1. Góc Xoay Tự định hướng Bánh xe Tự lựa (Dual Caster Swivel Angles)'
+              isVi ? '1. Góc Xoay Tự định hướng Bánh xe Tự lựa (Dual Caster Swivel Angles)' : '1. Trailing Caster Swivel Kingpin Angles (Dual Caster ψ_cF, ψ_cR)'
             )}
 
             {renderMultiLinePlot(
               [
-                { id: 'omega_cF', label: 'Vận tốc góc Caster Trước ω_cF', unit: 'rad/s', color: '#06b6d4', getValue: (p) => p.omega_cF },
-                { id: 'omega_cR', label: 'Vận tốc góc Caster Sau ω_cR', unit: 'rad/s', color: '#38bdf8', getValue: (p) => p.omega_cR },
+                { id: 'omega_cF', label: isVi ? 'Vận tốc góc Caster Trước ω_cF' : 'Front Caster Rate ω_cF', unit: 'rad/s', color: '#06b6d4', getValue: (p) => p.omega_cF },
+                { id: 'omega_cR', label: isVi ? 'Vận tốc góc Caster Sau ω_cR' : 'Rear Caster Rate ω_cR', unit: 'rad/s', color: '#38bdf8', getValue: (p) => p.omega_cR },
               ],
-              '2. Vận tốc Xoay Cụm Caster Bậc 2 (2nd-Order Swivel Rotational Rates: Ifork * d²ψ/dt²)'
+              isVi ? '2. Vận tốc Xoay Cụm Caster Bậc 2 (2nd-Order Swivel Rotational Rates: Ifork * d²ψ/dt²)' : '2. 2nd-Order Caster Swivel Angular Rates (I_fork · d²ψ/dt²)'
             )}
 
             {renderMultiLinePlot(
               [
-                { id: 'pitch', label: 'Độ nhún Pitch (Dọc)', unit: '°', color: '#a855f7', getValue: (p) => p.pitchDeg },
-                { id: 'roll', label: 'Độ nghiêng Roll (Ngang)', unit: '°', color: '#ec4899', getValue: (p) => p.rollDeg },
+                { id: 'pitch', label: isVi ? 'Độ nhún Pitch (Dọc)' : 'Chassis Pitch Angle', unit: '°', color: '#a855f7', getValue: (p) => p.pitchDeg },
+                { id: 'roll', label: isVi ? 'Độ nghiêng Roll (Ngang)' : 'Chassis Roll Angle', unit: '°', color: '#ec4899', getValue: (p) => p.rollDeg },
               ],
-              '2. Tư thế Dao động Động lực học Thân xe 3D (Chassis Pitch & Roll Attitude)'
+              isVi ? '2. Tư thế Dao động Động lực học Thân xe 3D (Chassis Pitch & Roll Attitude)' : '3. 3D Chassis Attitude Dynamics (Dynamic Pitch & Roll Angles)'
             )}
 
             {renderMultiLinePlot(
