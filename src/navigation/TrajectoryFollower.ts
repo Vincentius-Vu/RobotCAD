@@ -10,18 +10,32 @@ export interface FollowerResult {
 }
 
 export class TrajectoryFollower {
-  private static LOOKAHEAD_MIN = 0.35; // 35 cm minimum lookahead
-  private static GOAL_POS_TOLERANCE = 0.15; // 15 cm arrival threshold
-  private static GOAL_HEADING_TOLERANCE_RAD = 0.05; // ~2.8 deg final heading tolerance
-  private static IN_PLACE_ROTATION_THRESHOLD_RAD = 0.785; // 45 deg - threshold for in-place spin alignment
+  private static LOOKAHEAD_MIN = 0.40; // 40 cm minimum lookahead
+  private static GOAL_POS_TOLERANCE = 0.18; // 18 cm arrival threshold
+  private static GOAL_HEADING_TOLERANCE_RAD = 0.04; // ~2.3 deg final orientation precision
+  private static ROTATE_TRIGGER_RAD = 0.35; // ~20 deg (trigger in-place rotation during transit)
+  private static ROTATE_FINISH_RAD = 0.05; // ~2.8 deg (exit in-place rotation: must rotate ALL THE WAY)
+
+  // Navigation state machine
+  private static isAligningInPlace: boolean = false;
+  private static isAtGoalLatched: boolean = false;
+  private static currentPathRef: PathWaypoint[] | null = null;
+
+  public static resetState(): void {
+    this.isAligningInPlace = false;
+    this.isAtGoalLatched = false;
+    this.currentPathRef = null;
+  }
 
   /**
    * Computes forward and steering/angular commands using Pure Pursuit algorithm,
    * enhanced with:
-   * 1. Immediate in-place heading alignment when error > 45° (prevents wide runaway turning loops)
-   * 2. Smooth heading-attenuated forward speed scaling when aligned
-   * 3. Robust orthogonal projection to prevent waypoint jumping
-   * 4. Precise final position and orientation alignment at goal
+   * 1. Hysteresis-governed In-Place Rotation: when heading error > 20°, robot halts
+   *    and spins on the spot until heading is FULLY aligned (<= 2.8°) before
+   *    transitioning to forward translation ("xoay hết hướng rồi mới tịnh tiến").
+   * 2. Mandatory in-place alignment phase at the start of any new path or mission segment.
+   * 3. Latched Goal Arrival with high-precision in-place heading alignment at destination.
+   * 4. Smooth cos^2(alpha) attenuation during path tracking.
    */
   public static computePurePursuit(
     currentPose: MobileRobotPose,
@@ -32,6 +46,7 @@ export class TrajectoryFollower {
     targetHeadingRad?: number
   ): FollowerResult {
     if (!path || path.length === 0) {
+      this.resetState();
       return {
         velocity: { v: 0, vY: 0, omega: 0, steerAngleRad: 0 },
         nextWaypointIndex: 0,
@@ -41,17 +56,26 @@ export class TrajectoryFollower {
       };
     }
 
+    // Detect path change (new segment or new mission target)
+    if (this.currentPathRef !== path) {
+      this.currentPathRef = path;
+      this.isAligningInPlace = true; // Always start a new path segment by aligning heading in place
+      this.isAtGoalLatched = false;
+    }
+
     const finalGoal = path[path.length - 1];
     const distToFinal = Math.hypot(finalGoal.x - currentPose.x, finalGoal.y - currentPose.y);
 
-    // 1. Goal Arrival & Final Orientation Alignment
-    if (distToFinal <= this.GOAL_POS_TOLERANCE) {
+    // 1. Goal Arrival & Final Orientation Alignment (Latched)
+    if (distToFinal <= this.GOAL_POS_TOLERANCE || this.isAtGoalLatched) {
+      this.isAtGoalLatched = true;
+
       if (targetHeadingRad !== undefined) {
         const headingErr = MobileRobotKinematics.normalizeAngle(targetHeadingRad - currentPose.thetaRad);
         if (Math.abs(headingErr) > this.GOAL_HEADING_TOLERANCE_RAD) {
           const rotSpeed =
             Math.sign(headingErr) *
-            Math.min(specs.maxAngularSpeedRadps, Math.max(0.4, Math.abs(headingErr) * 2.2));
+            Math.min(specs.maxAngularSpeedRadps, Math.max(0.35, Math.abs(headingErr) * 2.5));
           return {
             velocity: { v: 0, vY: 0, omega: Number(rotSpeed.toFixed(3)), steerAngleRad: 0 },
             nextWaypointIndex: path.length - 1,
@@ -62,6 +86,10 @@ export class TrajectoryFollower {
         }
       }
 
+      // Reached goal position and orientation
+      this.isAtGoalLatched = false;
+      this.isAligningInPlace = false;
+      this.currentPathRef = null;
       return {
         velocity: { v: 0, vY: 0, omega: 0, steerAngleRad: 0 },
         nextWaypointIndex: path.length - 1,
@@ -111,27 +139,36 @@ export class TrajectoryFollower {
 
     // Alpha: angle between vehicle heading and vector to lookahead point
     const alpha = MobileRobotKinematics.normalizeAngle(targetAngle - currentPose.thetaRad);
-
-    // Approximate cross-track error to lookahead segment
     const crossTrackError = actualLookaheadDist * Math.sin(alpha);
 
-    // 4. IN-PLACE ROTATION MODE
-    // If heading error is large (> 45 deg), DO NOT drive forward!
-    // Enforce pure in-place differential spin to pivot towards the path.
-    if (Math.abs(alpha) > this.IN_PLACE_ROTATION_THRESHOLD_RAD) {
-      const rotSpeed =
-        Math.sign(alpha) *
-        Math.min(specs.maxAngularSpeedRadps, Math.max(0.45, Math.abs(alpha) * 2.2));
-      return {
-        velocity: { v: 0, vY: 0, omega: Number(rotSpeed.toFixed(3)), steerAngleRad: 0 },
-        nextWaypointIndex: targetIdx,
-        lookaheadPoint,
-        crossTrackErrorM: Number(Math.abs(crossTrackError).toFixed(3)),
-        isGoalReached: false,
-      };
+    // 4. IN-PLACE HEADING ALIGNMENT PHASE (Hysteresis)
+    // If heading error exceeds trigger threshold, enter in-place rotation
+    if (Math.abs(alpha) > this.ROTATE_TRIGGER_RAD) {
+      this.isAligningInPlace = true;
     }
 
-    // 5. PURE PURSUIT TRACKING (when |alpha| <= 45 deg)
+    // Once in in-place rotation, robot MUST rotate ALL THE WAY until error <= 2.8° (0.05 rad)
+    // before allowing any forward translation
+    if (this.isAligningInPlace) {
+      if (Math.abs(alpha) <= this.ROTATE_FINISH_RAD) {
+        // Completely aligned! Transition cleanly to translation phase
+        this.isAligningInPlace = false;
+      } else {
+        // Enforce STRICT ZERO forward velocity during rotation phase
+        const rotSpeed =
+          Math.sign(alpha) *
+          Math.min(specs.maxAngularSpeedRadps, Math.max(0.35, Math.abs(alpha) * 2.5));
+        return {
+          velocity: { v: 0, vY: 0, omega: Number(rotSpeed.toFixed(3)), steerAngleRad: 0 },
+          nextWaypointIndex: targetIdx,
+          lookaheadPoint,
+          crossTrackErrorM: Number(Math.abs(crossTrackError).toFixed(3)),
+          isGoalReached: false,
+        };
+      }
+    }
+
+    // 5. TRANSLATION & PURE PURSUIT TRACKING (active only when heading is fully aligned)
     const curvature = (2 * Math.sin(alpha)) / actualLookaheadDist;
 
     // Smooth speed scaling:

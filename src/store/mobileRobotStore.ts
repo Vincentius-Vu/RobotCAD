@@ -1299,6 +1299,7 @@ export const useMobileRobotStore = create<MobileRobotStoreState>((set, get) => (
   },
 
   resetPose: () => {
+    TrajectoryFollower.resetState();
     agvEngine.resetState({ x: 0, y: -3.8, psi: Math.PI / 2 });
     set({
       pose: { x: 0, y: -3.8, thetaRad: Math.PI / 2, z: 0.08 },
@@ -1348,6 +1349,7 @@ export const useMobileRobotStore = create<MobileRobotStoreState>((set, get) => (
   },
 
   stopAutonomousNavigation: () => {
+    TrajectoryFollower.resetState();
     set({
       isNavigating: false,
       isMissionRunning: false,
@@ -1539,6 +1541,7 @@ export const useMobileRobotStore = create<MobileRobotStoreState>((set, get) => (
           });
           vel = { v: 0, vY: 0, omega: 0, steerAngleRad: 0 };
         } else {
+          TrajectoryFollower.resetState();
           set({
             isNavigating: false,
             isMissionRunning: false,
