@@ -98,6 +98,22 @@ export const DEFAULT_MECANUM_SPECS: MobileRobotSpecs = {
   massKg: 24.0,
 };
 
+export const DEFAULT_WHEEL_LEGGED_SPECS: MobileRobotSpecs = {
+  id: 'wheel_legged_bipedal_01',
+  name: 'Wheel-Legged Robot (ESP32 Onshape)',
+  driveType: 'wheel_legged',
+  chassisWidthM: 0.277,
+  chassisLengthM: 0.386,
+  chassisHeightM: 0.237,
+  wheelRadiusM: 0.035,
+  trackWidthM: 0.200,
+  wheelBaseM: 0.0,
+  maxLinearSpeedMps: 2.5,
+  maxAngularSpeedRadps: 5.0,
+  maxAccelerationMps2: 4.0,
+  massKg: 2.2,
+};
+
 export const DEFAULT_WAREHOUSE_OBSTACLES: Obstacle[] = [
   // 4 Central Pillars
   {
@@ -316,7 +332,9 @@ export const useMobileRobotStore = create<MobileRobotStoreState>((set, get) => (
   clearAgvHistory: () => set({ agvHistory: [] }),
 
   setDriveType: (type: MobileDriveType) => {
-    const specs = type === 'mecanum' ? DEFAULT_MECANUM_SPECS : DEFAULT_DIFF_DRIVE_SPECS;
+    let specs = DEFAULT_DIFF_DRIVE_SPECS;
+    if (type === 'mecanum') specs = DEFAULT_MECANUM_SPECS;
+    else if (type === 'wheel_legged') specs = DEFAULT_WHEEL_LEGGED_SPECS;
     const numWheels = type === 'mecanum' ? 4 : 2;
     set({
       specs,

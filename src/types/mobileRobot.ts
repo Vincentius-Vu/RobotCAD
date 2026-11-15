@@ -1,4 +1,4 @@
-export type MobileDriveType = 'differential' | 'mecanum' | 'ackermann';
+export type MobileDriveType = 'differential' | 'mecanum' | 'ackermann' | 'wheel_legged';
 
 export type MobileNavigationMode = 'manual_teleop' | 'waypoint_navigation' | 'path_following';
 

@@ -174,6 +174,7 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
           >
             <option value="differential">TurtleBot / Pioneer (Diff-Drive)</option>
             <option value="mecanum">KUKA youBot Base (Mecanum-4WD)</option>
+            <option value="wheel_legged">Wheel-Legged Bipedal (Onshape CAD)</option>
           </select>
         )}
       </div>

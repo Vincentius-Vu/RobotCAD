@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {
   MobileRobotPose,
   WheelState,
@@ -22,6 +23,9 @@ export class MobileRobotVisuals {
   private casterFrontGroup: THREE.Group;
   private casterRearGroup: THREE.Group;
   private lidarPuck: THREE.Group;
+  private wheelLeggedGroup: THREE.Group | null = null;
+  private isWheelLeggedLoading = false;
+  private currentDriveType: MobileDriveType = 'differential';
 
   // Visual Overlays
   private laserPoints: THREE.Points;
@@ -239,6 +243,21 @@ export class MobileRobotVisuals {
   }
 
   private buildWheels(driveType: MobileDriveType) {
+    if (driveType === 'wheel_legged') {
+      for (const w of this.wheels) {
+        this.robotBodyGroup.remove(w);
+      }
+      this.wheels = [];
+      while (this.casterFrontGroup.children.length > 0) {
+        this.casterFrontGroup.remove(this.casterFrontGroup.children[0]);
+      }
+      while (this.casterRearGroup.children.length > 0) {
+        this.casterRearGroup.remove(this.casterRearGroup.children[0]);
+      }
+      this.loadWheelLeggedModel();
+      return;
+    }
+
     // Clear existing wheels
     for (const w of this.wheels) {
       this.robotBodyGroup.remove(w);
@@ -390,6 +409,43 @@ export class MobileRobotVisuals {
     }
   }
 
+  private loadWheelLeggedModel() {
+    if (this.wheelLeggedGroup || this.isWheelLeggedLoading) return;
+    this.isWheelLeggedLoading = true;
+    const loader = new GLTFLoader();
+    const baseUrl = (import.meta as any).env?.BASE_URL || '/';
+    const modelUrl = `${baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'}models/wheel_legged/Assembly_All.glb`;
+
+    loader.load(
+      modelUrl,
+      (gltf) => {
+        const root = gltf.scene;
+        root.scale.set(1000, 1000, 1000);
+        root.rotateX(-Math.PI / 2);
+        root.position.set(0, 121.8, 0);
+
+        root.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        });
+
+        this.wheelLeggedGroup = new THREE.Group();
+        this.wheelLeggedGroup.name = 'WheelLeggedCADModel';
+        this.wheelLeggedGroup.add(root);
+        this.chassisSuspensionGroup.add(this.wheelLeggedGroup);
+        this.wheelLeggedGroup.visible = this.currentDriveType === 'wheel_legged';
+        this.isWheelLeggedLoading = false;
+      },
+      undefined,
+      (err) => {
+        console.warn('Failed to load Assembly_All.glb', err);
+        this.isWheelLeggedLoading = false;
+      }
+    );
+  }
+
   public setVisible(visible: boolean) {
     this.group.visible = visible;
   }
@@ -401,11 +457,40 @@ export class MobileRobotVisuals {
     plannedPath: PathWaypoint[],
     navGoal: NavGoal | null,
     tracePoints: Array<{ x: number; y: number }>,
-    _driveType?: MobileDriveType,
+    driveType?: MobileDriveType,
     agvState?: AGVState | null,
     poseWaypoints?: MobilePoseWaypoint[]
   ) {
     if (!this.group.visible) return;
+
+    if (driveType && driveType !== this.currentDriveType) {
+      this.currentDriveType = driveType;
+      if (driveType === 'wheel_legged') {
+        this.chassisMesh.visible = false;
+        this.ledStrip.visible = false;
+        this.headingArrow.visible = false;
+        this.casterFrontGroup.visible = false;
+        this.casterRearGroup.visible = false;
+        this.lidarPuck.visible = false;
+        for (const w of this.wheels) w.visible = false;
+        if (!this.wheelLeggedGroup) {
+          this.loadWheelLeggedModel();
+        } else {
+          this.wheelLeggedGroup.visible = true;
+        }
+      } else {
+        if (this.wheelLeggedGroup) {
+          this.wheelLeggedGroup.visible = false;
+        }
+        this.chassisMesh.visible = true;
+        this.ledStrip.visible = true;
+        this.headingArrow.visible = true;
+        this.lidarPuck.visible = true;
+        this.casterFrontGroup.visible = true;
+        this.casterRearGroup.visible = true;
+        this.buildWheels(driveType);
+      }
+    }
 
     // Convert world (meters) to Three.js scene (millimeters)
     const worldX = pose.x * 1000;
