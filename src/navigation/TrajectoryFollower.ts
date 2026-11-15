@@ -10,12 +10,18 @@ export interface FollowerResult {
 }
 
 export class TrajectoryFollower {
-  private static LOOKAHEAD_MIN = 0.45; // 45 cm
-  private static GOAL_TOLERANCE = 0.15; // 15 cm
+  private static LOOKAHEAD_MIN = 0.35; // 35 cm minimum lookahead
+  private static GOAL_POS_TOLERANCE = 0.15; // 15 cm arrival threshold
+  private static GOAL_HEADING_TOLERANCE_RAD = 0.05; // ~2.8 deg final heading tolerance
+  private static IN_PLACE_ROTATION_THRESHOLD_RAD = 0.785; // 45 deg - threshold for in-place spin alignment
 
   /**
-   * Computes forward and steering commands using Pure Pursuit algorithm,
-   * with automatic in-place orientation alignment at the final goal.
+   * Computes forward and steering/angular commands using Pure Pursuit algorithm,
+   * enhanced with:
+   * 1. Immediate in-place heading alignment when error > 45° (prevents wide runaway turning loops)
+   * 2. Smooth heading-attenuated forward speed scaling when aligned
+   * 3. Robust orthogonal projection to prevent waypoint jumping
+   * 4. Precise final position and orientation alignment at goal
    */
   public static computePurePursuit(
     currentPose: MobileRobotPose,
@@ -38,14 +44,14 @@ export class TrajectoryFollower {
     const finalGoal = path[path.length - 1];
     const distToFinal = Math.hypot(finalGoal.x - currentPose.x, finalGoal.y - currentPose.y);
 
-    if (distToFinal <= this.GOAL_TOLERANCE) {
-      // In-place rotation to target heading if specified
+    // 1. Goal Arrival & Final Orientation Alignment
+    if (distToFinal <= this.GOAL_POS_TOLERANCE) {
       if (targetHeadingRad !== undefined) {
         const headingErr = MobileRobotKinematics.normalizeAngle(targetHeadingRad - currentPose.thetaRad);
-        if (Math.abs(headingErr) > 0.05) {
+        if (Math.abs(headingErr) > this.GOAL_HEADING_TOLERANCE_RAD) {
           const rotSpeed =
             Math.sign(headingErr) *
-            Math.min(specs.maxAngularSpeedRadps * 0.7, Math.max(0.25, Math.abs(headingErr) * 1.5));
+            Math.min(specs.maxAngularSpeedRadps, Math.max(0.4, Math.abs(headingErr) * 2.2));
           return {
             velocity: { v: 0, vY: 0, omega: Number(rotSpeed.toFixed(3)), steerAngleRad: 0 },
             nextWaypointIndex: path.length - 1,
@@ -65,14 +71,28 @@ export class TrajectoryFollower {
       };
     }
 
-    // Dynamic lookahead distance based on current speed
-    const lookaheadDist = Math.max(this.LOOKAHEAD_MIN, targetSpeedMps * 0.7);
+    // 2. Find closest point on path (searching within a reasonable forward window)
+    let closestIdx = currentWaypointIndex;
+    let minD = Infinity;
+    const searchStart = Math.max(0, currentWaypointIndex - 5);
+    const searchEnd = Math.min(path.length, currentWaypointIndex + 80);
 
-    // Find the next lookahead point along the path
-    let targetIdx = currentWaypointIndex;
+    for (let i = searchStart; i < searchEnd; i++) {
+      const d = Math.hypot(path[i].x - currentPose.x, path[i].y - currentPose.y);
+      if (d < minD) {
+        minD = d;
+        closestIdx = i;
+      }
+    }
+
+    // Dynamic lookahead distance based on target speed
+    const lookaheadDist = Math.max(this.LOOKAHEAD_MIN, targetSpeedMps * 0.65);
+
+    // 3. Find lookahead point searching forward from closestIdx
+    let targetIdx = closestIdx;
     let lookaheadPoint: PathWaypoint = path[path.length - 1];
 
-    for (let i = currentWaypointIndex; i < path.length; i++) {
+    for (let i = closestIdx; i < path.length; i++) {
       const d = Math.hypot(path[i].x - currentPose.x, path[i].y - currentPose.y);
       if (d >= lookaheadDist) {
         lookaheadPoint = path[i];
@@ -84,28 +104,45 @@ export class TrajectoryFollower {
     // Vector to lookahead point
     const dx = lookaheadPoint.x - currentPose.x;
     const dy = lookaheadPoint.y - currentPose.y;
-    const actualLookaheadDist = Math.hypot(dx, dy);
+    const actualLookaheadDist = Math.max(0.1, Math.hypot(dx, dy));
 
-    // Angle to target in world coordinates
+    // Target angle in world coordinates
     const targetAngle = Math.atan2(dy, dx);
 
-    // Alpha: angle between vehicle heading and line to lookahead point
+    // Alpha: angle between vehicle heading and vector to lookahead point
     const alpha = MobileRobotKinematics.normalizeAngle(targetAngle - currentPose.thetaRad);
 
-    // Curvature kappa = 2 * sin(alpha) / Ld
-    const curvature = (2 * Math.sin(alpha)) / Math.max(0.1, actualLookaheadDist);
+    // Approximate cross-track error to lookahead segment
+    const crossTrackError = actualLookaheadDist * Math.sin(alpha);
 
-    // Speed planning: slow down during sharp turns or approaching goal
-    const speedFactor = Math.max(0.25, Math.cos(alpha));
-    const distanceFactor = Math.min(1.0, distToFinal / 1.0);
+    // 4. IN-PLACE ROTATION MODE
+    // If heading error is large (> 45 deg), DO NOT drive forward!
+    // Enforce pure in-place differential spin to pivot towards the path.
+    if (Math.abs(alpha) > this.IN_PLACE_ROTATION_THRESHOLD_RAD) {
+      const rotSpeed =
+        Math.sign(alpha) *
+        Math.min(specs.maxAngularSpeedRadps, Math.max(0.45, Math.abs(alpha) * 2.2));
+      return {
+        velocity: { v: 0, vY: 0, omega: Number(rotSpeed.toFixed(3)), steerAngleRad: 0 },
+        nextWaypointIndex: targetIdx,
+        lookaheadPoint,
+        crossTrackErrorM: Number(Math.abs(crossTrackError).toFixed(3)),
+        isGoalReached: false,
+      };
+    }
+
+    // 5. PURE PURSUIT TRACKING (when |alpha| <= 45 deg)
+    const curvature = (2 * Math.sin(alpha)) / actualLookaheadDist;
+
+    // Smooth speed scaling:
+    // - cos^2(alpha) gently attenuates forward velocity during curved tracking
+    // - distanceFactor tapers speed when decelerating towards final destination
+    const speedFactor = Math.pow(Math.cos(alpha), 2);
+    const distanceFactor = Math.min(1.0, Math.max(0.25, distToFinal / 0.8));
     const desiredV = Math.min(specs.maxLinearSpeedMps, targetSpeedMps) * speedFactor * distanceFactor;
 
-    // Angular velocity omega = v * curvature
     let desiredOmega = desiredV * curvature;
     desiredOmega = Math.max(-specs.maxAngularSpeedRadps, Math.min(specs.maxAngularSpeedRadps, desiredOmega));
-
-    // Approximate cross-track error to nearest path segment
-    const crossTrackError = actualLookaheadDist * Math.sin(alpha);
 
     return {
       velocity: {
