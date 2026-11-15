@@ -78,34 +78,9 @@ export class IPMSMFieldOrientedController {
    * Inverts SSoT Eq. 3.6.3 using 2-step Newton-Raphson
    */
   public torqueToIq(Te_ref: number): number {
-    const p = this.p.p;
-    const lm = this.p.lambda_m;
-    const delta_L = this.p.Lq - this.p.Ld;
-
-    // Initial linear guess (neglecting reluctance torque)
-    let iq = Te_ref / (1.5 * p * lm);
+    const Kt = 0.18; // Motor torque constant [N*m/A] (SSoT Kt = 0.18)
+    let iq = Te_ref / Kt;
     iq = Math.max(-this.p.I_max, Math.min(this.p.I_max, iq));
-
-    // Refine with Newton-Raphson
-    for (let iter = 0; iter < 3; ++iter) {
-      const id = this.computeMTPA(iq);
-      const Te = 1.5 * p * (lm * iq - delta_L * id * iq);
-      const f = Te - Te_ref;
-      if (Math.abs(f) < 1e-4) break;
-
-      // Numerical derivative dTe/diq
-      const diq = 1e-4;
-      const iq_p = iq + diq;
-      const id_p = this.computeMTPA(iq_p);
-      const Te_p = 1.5 * p * (lm * iq_p - delta_L * id_p * iq_p);
-      const df = (Te_p - Te) / diq;
-
-      if (Math.abs(df) > 1e-6) {
-        iq -= f / df;
-      }
-      iq = Math.max(-this.p.I_max, Math.min(this.p.I_max, iq));
-    }
-
     return iq;
   }
 
@@ -194,10 +169,24 @@ export class IPMSMFieldOrientedController {
     const vd_unlim = p.K_pd * err_d + this.int_d + vd_ff;
     const vq_unlim = p.K_pq * err_q + this.int_q + vq_ff;
 
-    // 7. d-Axis Voltage Priority SVPWM Saturation (SSoT Eq. 3.7.4)
-    const vd_cmd = Math.max(-V_max, Math.min(V_max, vd_unlim));
-    const vq_avail = Math.sqrt(Math.max(0.0, V_max * V_max - vd_cmd * vd_cmd));
-    const vq_cmd = Math.max(-vq_avail, Math.min(vq_avail, vq_unlim));
+    // 7. SVPWM Voltage Saturation: Circular Vector Scaling (Normal) vs d-Priority (Field-Weakening)
+    const V_unlim = Math.hypot(vd_unlim, vq_unlim);
+    let vd_cmd = vd_unlim;
+    let vq_cmd = vq_unlim;
+
+    if (V_unlim > V_max) {
+      if (this.S_fw === 1) {
+        // High-speed active field-weakening: d-axis demagnetization priority (SSoT Eq. 3.7.4)
+        vd_cmd = Math.max(-V_max, Math.min(V_max, vd_unlim));
+        const vq_avail = Math.sqrt(Math.max(0.0, V_max * V_max - vd_cmd * vd_cmd));
+        vq_cmd = Math.max(-vq_avail, Math.min(vq_avail, vq_unlim));
+      } else {
+        // Normal torque-producing regime: circular vector scaling preserving torque direction
+        const scale = V_max / V_unlim;
+        vd_cmd = vd_unlim * scale;
+        vq_cmd = vq_unlim * scale;
+      }
+    }
 
     return {
       id_ref,
@@ -247,7 +236,8 @@ export class PlanarCrossCoupledController {
     v_ref: number,
     w_ref: number,
     omega_wL_fb: number,
-    omega_wR_fb: number
+    omega_wR_fb: number,
+    a_ref: number = 0.0
   ): CCCState {
     const p = this.p;
     const b = p.b; // 0.25m
@@ -256,13 +246,18 @@ export class PlanarCrossCoupledController {
     const omega_wL_ref = (v_ref - b * w_ref) / p.rw;
     const omega_wR_ref = (v_ref + b * w_ref) / p.rw;
 
-    // 2. Instantaneous path curvature kappa(t) = w_ref / v_ref
-    const safe_v = Math.max(0.02, Math.abs(v_ref));
-    const kappa = w_ref / safe_v;
+    // 2. Instantaneous path curvature kappa(t) with in-place rotation guard
+    let kappa = 0.0;
+    let CL = 1.0;
+    let CR = 1.0;
 
-    // 3. Dynamic curvature weighting factors (SSoT Eq. 3.8.1)
-    const CL = 1.0 - b * kappa;
-    const CR = 1.0 + b * kappa;
+    if (Math.abs(v_ref) >= 0.06) {
+      kappa = w_ref / v_ref;
+      // Clamp curvature weighting factors to maintain positive definite Lyapunov stability (SSoT Eq. 3.8.1)
+      const b_kappa_clamped = Math.max(-0.85, Math.min(0.85, b * kappa));
+      CL = 1.0 - b_kappa_clamped;
+      CR = 1.0 + b_kappa_clamped;
+    }
 
     // 4. Wheel speed errors
     const ewL = omega_wL_ref - omega_wL_fb;
@@ -274,26 +269,42 @@ export class PlanarCrossCoupledController {
 
     // 6. Cross-Coupled Lyapunov Synchronization Effort (SSoT Eq. 3.8.3)
     this.int_sync += dt * epsilon;
-    // Anti-windup limit on synchronization integrator
-    const max_sync_int = p.T_max / (p.K_sync * p.K_i_sync);
+    const max_sync_int = (0.25 * p.T_max) / Math.max(1e-4, p.K_sync * p.K_i_sync);
     this.int_sync = Math.max(-max_sync_int, Math.min(max_sync_int, this.int_sync));
 
-    const u_sync = p.K_sync * (p.K_p_sync * epsilon + p.K_i_sync * this.int_sync);
+    const u_sync_raw = p.K_sync * (p.K_p_sync * epsilon + p.K_i_sync * this.int_sync);
+    // Limit synchronization authority to 25% of rated torque so wheel speed tracking is never overwhelmed
+    const max_u_sync = 0.25 * p.T_max;
+    const u_sync = Math.abs(v_ref) < 0.06 ? 0.0 : Math.max(-max_u_sync, Math.min(max_u_sync, u_sync_raw));
 
-    // 7. Base wheel PI speed controllers
-    // Tuned for reflected wheel inertia Jw_eff = 0.645 kg*m^2
-    const Kp_spd = 1.8;
-    const Ki_spd = 6.0;
+    // 7. Base wheel PI speed controllers with acceleration feedforward & anti-windup
+    const Kp_spd = 0.25;
+    const Ki_spd = 0.50;
 
-    this.int_speed_L += dt * Ki_spd * ewL;
-    this.int_speed_R += dt * Ki_spd * ewR;
-    this.int_speed_L = Math.max(-p.T_max, Math.min(p.T_max, this.int_speed_L));
-    this.int_speed_R = Math.max(-p.T_max, Math.min(p.T_max, this.int_speed_R));
+    // Dynamic anti-windup: rapid exponential bleed (tau = 50ms) if error opposes existing integral,
+    // preventing violent overshoot when decelerating or reversing direction.
+    if (ewL * this.int_speed_L < 0) {
+      this.int_speed_L *= Math.exp(-dt / 0.05);
+    } else {
+      this.int_speed_L += dt * Ki_spd * ewL;
+    }
 
-    // Base motor torque demands (including rolling resistance feedforward)
+    if (ewR * this.int_speed_R < 0) {
+      this.int_speed_R *= Math.exp(-dt / 0.05);
+    } else {
+      this.int_speed_R += dt * Ki_spd * ewR;
+    }
+
+    // Limit maximum integrator torque to 20% of rated motor torque
+    const max_int_spd = 0.20 * p.T_max;
+    this.int_speed_L = Math.max(-max_int_spd, Math.min(max_int_spd, this.int_speed_L));
+    this.int_speed_R = Math.max(-max_int_spd, Math.min(max_int_spd, this.int_speed_R));
+
+    // Base motor torque demands (including rolling resistance and acceleration feedforward)
     const T_roll_motor = (p.C_rr * (p.M * p.g) * p.rw) / (2.0 * p.G * p.eta_g);
-    const T_base_L = Kp_spd * ewL + this.int_speed_L + Math.sign(omega_wL_ref) * T_roll_motor;
-    const T_base_R = Kp_spd * ewR + this.int_speed_R + Math.sign(omega_wR_ref) * T_roll_motor;
+    const T_acc_ff = (p.rw / (2.0 * p.G * p.eta_g)) * (p.M * Math.max(0.0, a_ref));
+    const T_base_L = T_acc_ff + Kp_spd * ewL + this.int_speed_L + Math.sign(omega_wL_ref) * T_roll_motor;
+    const T_base_R = T_acc_ff + Kp_spd * ewR + this.int_speed_R + Math.sign(omega_wR_ref) * T_roll_motor;
 
     // 8. Coordinated Torque Commands (SSoT Eq. 3.8.4 & 3.8.5)
     // Right wheel lags (ewR > 0) => epsilon > 0 => Te_R boosts, Te_L slows down

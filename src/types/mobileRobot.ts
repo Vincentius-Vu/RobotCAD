@@ -87,3 +87,8 @@ export interface MobilePoseWaypoint {
   thetaDeg: number; // Hướng xe (độ)
   segmentDuration: number; // Thời gian dự kiến di chuyển (s)
 }
+
+export type { KDSNode, KDSNodeType, KDSTrajectoryPoint, KDSPlanResult, SOTABenchmarkSummary } from '../navigation/KDSMotionPlanner';
+export type { TrackingControlOutput, LyapunovTrackerConfig } from '../navigation/DiscreteLyapunovTracker';
+
+

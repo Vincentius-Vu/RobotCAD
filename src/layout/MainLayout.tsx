@@ -16,8 +16,11 @@ import { VirtualCaliperModal } from '../components/VirtualLab/VirtualCaliperModa
 import { AcademicReportModal } from '../components/Export/AcademicReportModal';
 import { MultiPhysicsOscilloscopeDialog } from '../components/Dynamics/MultiPhysicsOscilloscopeDialog';
 import { AddPoseModal } from '../components/UI/AddPoseModal';
+import { KDSSOTAModal } from '../components/Dynamics/KDSSOTAModal';
+import { MultiPhysicsBatchModal } from '../components/Dynamics/MultiPhysicsBatchModal';
 import { DemoDirectorHUD } from '../components/UI/DemoDirectorHUD';
 import { DemoDirector } from '../services/demoDirector';
+
 
 export const MainLayout: React.FC = () => {
   const [isEnvCameraOpen, setIsEnvCameraOpen] = useState(false);
@@ -178,6 +181,10 @@ export const MainLayout: React.FC = () => {
         isOpen={isAddPoseModalOpen}
         onClose={closeAddPoseModal}
       />
+
+      <KDSSOTAModal />
+      <MultiPhysicsBatchModal />
     </div>
   );
 };
+

@@ -9,7 +9,10 @@ import {
   Obstacle,
   MobileDriveType,
   MobilePoseWaypoint,
+  KDSNode,
+  KDSTrajectoryPoint,
 } from '../../types/mobileRobot';
+
 import { AGVState } from '../../physics/mobile/AGVDigitalTwinEngine';
 
 export class MobileRobotVisuals {
@@ -17,12 +20,15 @@ export class MobileRobotVisuals {
   private robotBodyGroup: THREE.Group;
   private chassisSuspensionGroup: THREE.Group;
   private chassisMesh: THREE.Mesh;
+  private deckMesh: THREE.Mesh;
   private ledStrip: THREE.Mesh;
   private headingArrow: THREE.Mesh;
   private wheels: (THREE.Mesh | THREE.Group)[] = [];
   private casterFrontGroup: THREE.Group;
   private casterRearGroup: THREE.Group;
   private lidarPuck: THREE.Group;
+  private proceduralAgvGroup: THREE.Group;
+  private wheelsGroup: THREE.Group;
   private wheelLeggedGroup: THREE.Group | null = null;
   private isWheelLeggedLoading = false;
   private currentDriveType: MobileDriveType = 'differential';
@@ -39,9 +45,14 @@ export class MobileRobotVisuals {
   private traceGeo: THREE.BufferGeometry;
   private obstaclesGroup: THREE.Group;
   private waypointsGroup: THREE.Group;
+  private kdsWaypointsGroup: THREE.Group;
+  private kdsTrajectoryLine: THREE.Line;
+  private kdsTrajectoryGeo: THREE.BufferGeometry;
 
   private currentObstaclesHash = '';
   private currentWaypointsHash = '';
+  private currentKdsNodesHash = '';
+
 
   constructor(scene: THREE.Scene) {
     this.group = new THREE.Group();
@@ -56,11 +67,16 @@ export class MobileRobotVisuals {
     this.chassisSuspensionGroup = new THREE.Group();
     this.robotBodyGroup.add(this.chassisSuspensionGroup);
 
-    // Dual Swivel Casters groups
+    // Procedural AGV Container (isolates ALL default box chassis, decks, and wheels)
+    this.proceduralAgvGroup = new THREE.Group();
+    this.proceduralAgvGroup.name = 'ProceduralAGVContainer';
+    this.chassisSuspensionGroup.add(this.proceduralAgvGroup);
+
+    // Dual Swivel Casters groups (attached to proceduralAgvGroup)
     this.casterFrontGroup = new THREE.Group();
     this.casterRearGroup = new THREE.Group();
-    this.robotBodyGroup.add(this.casterFrontGroup);
-    this.robotBodyGroup.add(this.casterRearGroup);
+    this.proceduralAgvGroup.add(this.casterFrontGroup);
+    this.proceduralAgvGroup.add(this.casterRearGroup);
 
     // Chassis Base Box: 960mm x 160mm x 420mm (SSoT v2.0.0, recesses for drive wheels at Z = +-250mm)
     const chassisGeo = new THREE.BoxGeometry(960, 160, 420);
@@ -73,14 +89,14 @@ export class MobileRobotVisuals {
     this.chassisMesh.position.y = 130; // 50mm ground clearance
     this.chassisMesh.castShadow = true;
     this.chassisMesh.receiveShadow = true;
-    this.chassisSuspensionGroup.add(this.chassisMesh);
+    this.proceduralAgvGroup.add(this.chassisMesh);
 
     // Top Cargo Deck / Overhang Protective Plate: 960mm x 20mm x 540mm
     const deckGeo = new THREE.BoxGeometry(960, 20, 540);
-    const deckMesh = new THREE.Mesh(deckGeo, chassisMat);
-    deckMesh.position.y = 220;
-    deckMesh.castShadow = true;
-    this.chassisSuspensionGroup.add(deckMesh);
+    this.deckMesh = new THREE.Mesh(deckGeo, chassisMat);
+    this.deckMesh.position.y = 220;
+    this.deckMesh.castShadow = true;
+    this.proceduralAgvGroup.add(this.deckMesh);
 
     // Luminous Cyber Cyan LED Light Strip around deck perimeter
     const ledGeo = new THREE.BoxGeometry(966, 20, 546);
@@ -92,7 +108,7 @@ export class MobileRobotVisuals {
     });
     this.ledStrip = new THREE.Mesh(ledGeo, ledMat);
     this.ledStrip.position.y = 220;
-    this.chassisSuspensionGroup.add(this.ledStrip);
+    this.proceduralAgvGroup.add(this.ledStrip);
 
     // Heading Arrow on top (+X direction)
     const arrowShape = new THREE.Shape();
@@ -115,7 +131,11 @@ export class MobileRobotVisuals {
     });
     this.headingArrow = new THREE.Mesh(arrowGeo, arrowMat);
     this.headingArrow.position.set(0, 236, 0);
-    this.chassisSuspensionGroup.add(this.headingArrow);
+    this.proceduralAgvGroup.add(this.headingArrow);
+
+    // Wheels group container inside proceduralAgvGroup
+    this.wheelsGroup = new THREE.Group();
+    this.proceduralAgvGroup.add(this.wheelsGroup);
 
     // 2. Wheels (Differential: 2 large drive wheels + 2 swiveling casters)
     this.buildWheels('differential');
@@ -142,7 +162,7 @@ export class MobileRobotVisuals {
     );
     domeCyl.position.y = 25;
     this.lidarPuck.add(domeCyl);
-    this.chassisSuspensionGroup.add(this.lidarPuck);
+    this.proceduralAgvGroup.add(this.lidarPuck);
 
     // 4. LIDAR Point Cloud & Ray Beams
     const maxScanPoints = 360;
@@ -240,27 +260,27 @@ export class MobileRobotVisuals {
     // 9. Mission Pose Waypoints Group
     this.waypointsGroup = new THREE.Group();
     this.group.add(this.waypointsGroup);
+
+    // 10. KDS Trajectory & Nodes Group
+    this.kdsWaypointsGroup = new THREE.Group();
+    this.group.add(this.kdsWaypointsGroup);
+
+    this.kdsTrajectoryGeo = new THREE.BufferGeometry();
+    const kdsPositions = new Float32Array(5000 * 3);
+    this.kdsTrajectoryGeo.setAttribute('position', new THREE.BufferAttribute(kdsPositions, 3));
+    const kdsMat = new THREE.LineBasicMaterial({
+      color: 0x10b981, // Emerald green for KDS planned profile
+      linewidth: 3,
+    });
+    this.kdsTrajectoryLine = new THREE.Line(this.kdsTrajectoryGeo, kdsMat);
+    this.group.add(this.kdsTrajectoryLine);
   }
 
-  private buildWheels(driveType: MobileDriveType) {
-    if (driveType === 'wheel_legged') {
-      for (const w of this.wheels) {
-        this.robotBodyGroup.remove(w);
-      }
-      this.wheels = [];
-      while (this.casterFrontGroup.children.length > 0) {
-        this.casterFrontGroup.remove(this.casterFrontGroup.children[0]);
-      }
-      while (this.casterRearGroup.children.length > 0) {
-        this.casterRearGroup.remove(this.casterRearGroup.children[0]);
-      }
-      this.loadWheelLeggedModel();
-      return;
-    }
 
-    // Clear existing wheels
+  private buildWheels(driveType: MobileDriveType) {
+    // Clear existing wheels from wheelsGroup
     for (const w of this.wheels) {
-      this.robotBodyGroup.remove(w);
+      this.wheelsGroup.remove(w);
     }
     this.wheels = [];
 
@@ -270,6 +290,10 @@ export class MobileRobotVisuals {
     }
     while (this.casterRearGroup.children.length > 0) {
       this.casterRearGroup.remove(this.casterRearGroup.children[0]);
+    }
+
+    if (driveType === 'wheel_legged') {
+      return;
     }
 
     // SSoT Master Unified v2.0.0: rw = 0.10m (radius 100mm, diameter 200mm)
@@ -347,12 +371,12 @@ export class MobileRobotVisuals {
       // SSoT v2.0.0: Track width L = 0.50m (Z = +-250mm)
       // Left drive wheel (Z = +250mm)
       const wLeft = createWheelGroup(0, wheelRadius, 250, true);
-      this.robotBodyGroup.add(wLeft);
+      this.wheelsGroup.add(wLeft);
       this.wheels.push(wLeft);
 
       // Right drive wheel (Z = -250mm)
       const wRight = createWheelGroup(0, wheelRadius, -250, false);
-      this.robotBodyGroup.add(wRight);
+      this.wheelsGroup.add(wRight);
       this.wheels.push(wRight);
 
       // Helper to build a high-fidelity swiveling caster assembly with kingpin and trailing wheel
@@ -403,7 +427,7 @@ export class MobileRobotVisuals {
       ];
       for (const [x, y, z, isLeft] of positions) {
         const w = createWheelGroup(x, y, z, isLeft);
-        this.robotBodyGroup.add(w);
+        this.wheelsGroup.add(w);
         this.wheels.push(w);
       }
     }
@@ -420,8 +444,13 @@ export class MobileRobotVisuals {
       modelUrl,
       (gltf) => {
         const root = gltf.scene;
+        // Bounding box: ~0.386m length, 0.277m width, 0.237m height
+        // Scale meters to millimeters (x1000)
         root.scale.set(1000, 1000, 1000);
+        // Onshape CAD coordinates: Z is up, X is lateral, Y is longitudinal
+        // Convert to Three.js coordinates: Y is up, X is lateral, Z is longitudinal
         root.rotateX(-Math.PI / 2);
+        // Bottom of wheels is at Z = -121.8mm in CAD, align to ground plane Y = 0
         root.position.set(0, 121.8, 0);
 
         root.traverse((child) => {
@@ -459,36 +488,35 @@ export class MobileRobotVisuals {
     tracePoints: Array<{ x: number; y: number }>,
     driveType?: MobileDriveType,
     agvState?: AGVState | null,
-    poseWaypoints?: MobilePoseWaypoint[]
+    poseWaypoints?: MobilePoseWaypoint[],
+    kdsNodes?: KDSNode[],
+    kdsTrajectory?: KDSTrajectoryPoint[]
   ) {
+
     if (!this.group.visible) return;
 
+    const isWheelLegged = (driveType || this.currentDriveType) === 'wheel_legged';
+
+    // Handle dynamic switching of robot model
     if (driveType && driveType !== this.currentDriveType) {
       this.currentDriveType = driveType;
-      if (driveType === 'wheel_legged') {
-        this.chassisMesh.visible = false;
-        this.ledStrip.visible = false;
-        this.headingArrow.visible = false;
-        this.casterFrontGroup.visible = false;
-        this.casterRearGroup.visible = false;
-        this.lidarPuck.visible = false;
-        for (const w of this.wheels) w.visible = false;
-        if (!this.wheelLeggedGroup) {
-          this.loadWheelLeggedModel();
-        } else {
-          this.wheelLeggedGroup.visible = true;
-        }
-      } else {
-        if (this.wheelLeggedGroup) {
-          this.wheelLeggedGroup.visible = false;
-        }
-        this.chassisMesh.visible = true;
-        this.ledStrip.visible = true;
-        this.headingArrow.visible = true;
-        this.lidarPuck.visible = true;
-        this.casterFrontGroup.visible = true;
-        this.casterRearGroup.visible = true;
+      if (!isWheelLegged) {
         this.buildWheels(driveType);
+      }
+    }
+
+    // Toggle visibility: isolate Procedural AGV group completely from Wheel-Legged CAD model
+    this.proceduralAgvGroup.visible = !isWheelLegged;
+
+    if (isWheelLegged) {
+      if (this.wheelLeggedGroup) {
+        this.wheelLeggedGroup.visible = true;
+      } else if (!this.isWheelLeggedLoading) {
+        this.loadWheelLeggedModel();
+      }
+    } else {
+      if (this.wheelLeggedGroup) {
+        this.wheelLeggedGroup.visible = false;
       }
     }
 
@@ -684,7 +712,96 @@ export class MobileRobotVisuals {
     } else {
       this.traceLine.visible = false;
     }
+
+    // Update KDS Nodes 3D Visualization
+    if (kdsNodes && kdsNodes.length > 0) {
+      const kdsHash = kdsNodes.map((n) => `${n.id}_${n.type}_${n.x}_${n.y}_${n.theta}`).join('|');
+      if (kdsHash !== this.currentKdsNodesHash) {
+        this.currentKdsNodesHash = kdsHash;
+        while (this.kdsWaypointsGroup.children.length > 0) {
+          const child = this.kdsWaypointsGroup.children[0];
+          this.kdsWaypointsGroup.remove(child);
+        }
+
+        kdsNodes.forEach((node) => {
+          const nodeObj = new THREE.Group();
+          nodeObj.position.set(node.x * 1000, 0, -node.y * 1000);
+          nodeObj.rotation.y = node.theta;
+
+          const isTarget = node.type === 'Target';
+          const primaryColor = isTarget ? 0xa855f7 : 0xf59e0b; // Purple for Target, Amber for Waypoint
+          const emissiveColor = isTarget ? 0x7e22ce : 0xd97706;
+
+          // Ground ring
+          const ringGeo = new THREE.RingGeometry(140, 180, 24);
+          ringGeo.rotateX(-Math.PI / 2);
+          const ringMat = new THREE.MeshBasicMaterial({
+            color: primaryColor,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.85,
+          });
+          const ring = new THREE.Mesh(ringGeo, ringMat);
+          ring.position.y = 4;
+          nodeObj.add(ring);
+
+          // If Target: add directional cone arrow (enforcing docking heading)
+          if (isTarget) {
+            const arrowDir = new THREE.ConeGeometry(30, 95, 12);
+            arrowDir.rotateX(Math.PI / 2);
+            const arrowMat = new THREE.MeshStandardMaterial({
+              color: 0xc084fc,
+              emissive: 0x9333ea,
+              emissiveIntensity: 0.8,
+            });
+            const arrow = new THREE.Mesh(arrowDir, arrowMat);
+            arrow.position.set(0, 14, 140);
+            nodeObj.add(arrow);
+          }
+
+          // Center pole & Beacon
+          const poleGeo = new THREE.CylinderGeometry(8, 8, 110, 8);
+          const poleMat = new THREE.MeshStandardMaterial({ color: primaryColor, roughness: 0.3 });
+          const pole = new THREE.Mesh(poleGeo, poleMat);
+          pole.position.y = 55;
+          nodeObj.add(pole);
+
+          const beaconGeo = new THREE.SphereGeometry(18, 16, 16);
+          const beaconMat = new THREE.MeshStandardMaterial({
+            color: primaryColor,
+            emissive: emissiveColor,
+            emissiveIntensity: 0.9,
+          });
+          const beacon = new THREE.Mesh(beaconGeo, beaconMat);
+          beacon.position.y = 115;
+          nodeObj.add(beacon);
+
+          this.kdsWaypointsGroup.add(nodeObj);
+        });
+      }
+      this.kdsWaypointsGroup.visible = true;
+    } else {
+      this.kdsWaypointsGroup.visible = false;
+    }
+
+    // Update KDS Trajectory Line
+    if (kdsTrajectory && kdsTrajectory.length > 0) {
+      const kdsAttr = this.kdsTrajectoryGeo.attributes.position as THREE.BufferAttribute;
+      const kdsArr = kdsAttr.array as Float32Array;
+      const maxPts = Math.min(kdsTrajectory.length, 5000);
+      for (let i = 0; i < maxPts; i++) {
+        kdsArr[i * 3] = kdsTrajectory[i].x * 1000;
+        kdsArr[i * 3 + 1] = 4; // Slightly above ground
+        kdsArr[i * 3 + 2] = -kdsTrajectory[i].y * 1000;
+      }
+      this.kdsTrajectoryGeo.setDrawRange(0, maxPts);
+      kdsAttr.needsUpdate = true;
+      this.kdsTrajectoryLine.visible = true;
+    } else {
+      this.kdsTrajectoryLine.visible = false;
+    }
   }
+
 
   public updateObstacles(obstacles: Obstacle[]) {
     const hash = JSON.stringify(obstacles.map((o) => `${o.id}_${o.position.x}_${o.position.y}`));

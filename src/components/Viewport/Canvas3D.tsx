@@ -66,7 +66,9 @@ export const Canvas3D: React.FC = () => {
           mState.tracePoints,
           mState.specs.driveType,
           mState.agvState,
-          mState.poseWaypoints
+          mState.poseWaypoints,
+          mState.kdsNodes,
+          mState.kdsTrajectory
         );
       }
     }
@@ -93,9 +95,12 @@ export const Canvas3D: React.FC = () => {
           mState.tracePoints,
           mState.specs.driveType,
           mState.agvState,
-          mState.poseWaypoints
+          mState.poseWaypoints,
+          mState.kdsNodes,
+          mState.kdsTrajectory
         );
       }
+
 
       animId = requestAnimationFrame(loop);
     };

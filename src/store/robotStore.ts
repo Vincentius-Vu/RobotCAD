@@ -1707,3 +1707,7 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
     ScientificBenchmarkExporter.triggerDownload(result.csvContent, result.filename);
   },
 }));
+
+if (typeof window !== 'undefined') {
+  (window as unknown as { __ROBOCAD_STORE__?: typeof useRobotStore }).__ROBOCAD_STORE__ = useRobotStore;
+}
