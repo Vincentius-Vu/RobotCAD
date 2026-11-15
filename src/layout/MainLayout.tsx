@@ -16,6 +16,8 @@ import { VirtualCaliperModal } from '../components/VirtualLab/VirtualCaliperModa
 import { AcademicReportModal } from '../components/Export/AcademicReportModal';
 import { MultiPhysicsOscilloscopeDialog } from '../components/Dynamics/MultiPhysicsOscilloscopeDialog';
 import { AddPoseModal } from '../components/UI/AddPoseModal';
+import { DemoDirectorHUD } from '../components/UI/DemoDirectorHUD';
+import { DemoDirector } from '../services/demoDirector';
 
 export const MainLayout: React.FC = () => {
   const [isEnvCameraOpen, setIsEnvCameraOpen] = useState(false);
@@ -84,6 +86,18 @@ export const MainLayout: React.FC = () => {
     toggleRightInspector,
   ]);
 
+  // Auto-launch Scenario 1 demo via ?demo=1 | ?demo=canvas | ?demo=preview
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const demoParam = params.get('demo');
+    if (!demoParam) return;
+    const mode = demoParam === 'preview' ? 'none' : 'canvas';
+    const timer = setTimeout(() => {
+      DemoDirector.runScenario1(mode);
+    }, 1400);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className="w-screen h-screen overflow-hidden bg-slate-950 font-sans flex flex-col text-slate-100 select-none">
       {/* 1. Top Industrial Ribbon */}
@@ -105,6 +119,7 @@ export const MainLayout: React.FC = () => {
         {/* Central 3D Viewport with Floating CAD/CAE HUDs */}
         <main className="flex-1 relative overflow-hidden bg-slate-950">
           <Canvas3D />
+          <DemoDirectorHUD />
 
           {/* Transparent Floating HUDs inside the Viewport */}
           {activeDomain === 'manipulator' ? (

@@ -107,6 +107,18 @@ interface RobotStoreState {
   recordingSeconds: number;
   recordingRequest: { action: 'start' | 'stop'; timestamp: number } | null;
 
+  // Auto-Demo Director State
+  demoState: {
+    isRunning: boolean;
+    scenarioId: string | null;
+    stepIndex: number;
+    totalSteps: number;
+    captionEn: string;
+    captionVi: string;
+    recordMode: 'none' | 'canvas' | 'tab';
+  };
+  setDemoState: (partial: Partial<RobotStoreState['demoState']>) => void;
+
   // Workspace Analysis State
   workspaceData: WorkspaceCloudData | null;
   workspaceSettings: WorkspaceSettings;
@@ -232,6 +244,7 @@ interface RobotStoreState {
 }
 
 let playbackAnimFrameId: number | null = null;
+let recordingIntervalId: ReturnType<typeof setInterval> | null = null;
 let lastTickTime = performance.now();
 
 function startPlaybackLoop(get: any, set: any) {
@@ -661,6 +674,20 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
   recordingSeconds: 0,
   recordingRequest: null,
 
+  demoState: {
+    isRunning: false,
+    scenarioId: null,
+    stepIndex: 0,
+    totalSteps: 5,
+    captionEn: '',
+    captionVi: '',
+    recordMode: 'none',
+  },
+  setDemoState: (partial) =>
+    set((state) => ({
+      demoState: { ...state.demoState, ...partial },
+    })),
+
   // Workspace Initial State
   workspaceData: null,
   workspaceSettings: {
@@ -871,14 +898,30 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
   },
 
   startVideoRecording: () => {
+    if (recordingIntervalId) {
+      clearInterval(recordingIntervalId);
+      recordingIntervalId = null;
+    }
     set({
       isRecording: true,
       recordingSeconds: 0,
       recordingRequest: { action: 'start', timestamp: Date.now() },
     });
+    recordingIntervalId = setInterval(() => {
+      if (!get().isRecording) {
+        if (recordingIntervalId) clearInterval(recordingIntervalId);
+        recordingIntervalId = null;
+        return;
+      }
+      set((s) => ({ recordingSeconds: s.recordingSeconds + 1 }));
+    }, 1000);
   },
 
   stopVideoRecording: () => {
+    if (recordingIntervalId) {
+      clearInterval(recordingIntervalId);
+      recordingIntervalId = null;
+    }
     set({
       isRecording: false,
       recordingRequest: { action: 'stop', timestamp: Date.now() },

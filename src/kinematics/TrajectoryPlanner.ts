@@ -125,6 +125,11 @@ export class TrajectoryPlanner {
             q_t[j] = q;
             qd_t[j] = qd;
             qdd_t[j] = qdd;
+          } else if (type === 's-curve') {
+            const { q, qd, qdd } = this.evalSCurve(q0[j], q1[j], t, T);
+            q_t[j] = q;
+            qd_t[j] = qd;
+            qdd_t[j] = qdd;
           } else {
             // Cubic default
             const { q, qd, qdd } = this.evalCubic(q0[j], q1[j], v0[j], v1[j], t, T);
@@ -392,6 +397,128 @@ export class TrajectoryPlanner {
     }
 
     return { q, qd, qdd };
+  }
+
+  /**
+   * Evaluates Jerk-Bounded 7-Segment Double S-Curve Profile
+   * Ensures C^2 position continuity, C^1 velocity continuity, and smooth Zero-Jerk handover at boundaries.
+   * Partitions motion into 7 canonical phases:
+   *   Phase 1: Jerk ramp-up (+J)
+   *   Phase 2: Constant acceleration plateau (a = Amax)
+   *   Phase 3: Jerk ramp-down (-J) reaching peak cruise velocity
+   *   Phase 4: Constant velocity cruising (a = 0, j = 0)
+   *   Phase 5: Jerk ramp-down into deceleration (-J)
+   *   Phase 6: Constant deceleration plateau (a = -Amax)
+   *   Phase 7: Jerk ramp-up to rest (+J, a -> 0, v -> 0)
+   */
+  private static evalSCurve(q0: number, q1: number, t: number, T: number) {
+    const dq = q1 - q0;
+    if (Math.abs(dq) < 1e-9 || T <= 1e-6) {
+      return { q: q0, qd: 0, qdd: 0 };
+    }
+
+    const tClamped = Math.max(0, Math.min(t, T));
+
+    // Canonical time partitioning (30% accel, 40% cruise, 30% decel)
+    const Tj = 0.1 * T; // Jerk ramp duration
+    const Ta = 0.1 * T; // Constant acceleration plateau duration
+    const Tacc = 2 * Tj + Ta; // Total acceleration phase duration (0.3 * T)
+    const Tv = T - 2 * Tacc; // Constant velocity plateau duration (0.4 * T)
+
+    // Derived kinematic peaks complying with total displacement dq over duration T
+    const Vmax = dq / (T - Tacc);
+    const Amax = Vmax / (Tj + Ta);
+    const Jmax = Amax / Tj;
+
+    let s = 0;
+    let v = 0;
+    let a = 0;
+
+    if (tClamped <= Tacc) {
+      // ACCELERATION REGION (Phases 1, 2, 3)
+      if (tClamped <= Tj) {
+        // Phase 1: Jerk ramp-up (+J)
+        a = Jmax * tClamped;
+        v = 0.5 * Jmax * Math.pow(tClamped, 2);
+        s = (1 / 6) * Jmax * Math.pow(tClamped, 3);
+      } else if (tClamped <= Tj + Ta) {
+        // Phase 2: Constant acceleration plateau
+        const dt = tClamped - Tj;
+        const v1 = 0.5 * Jmax * Math.pow(Tj, 2);
+        const s1 = (1 / 6) * Jmax * Math.pow(Tj, 3);
+        a = Amax;
+        v = v1 + Amax * dt;
+        s = s1 + v1 * dt + 0.5 * Amax * Math.pow(dt, 2);
+      } else {
+        // Phase 3: Jerk ramp-down (-J) to cruise speed
+        const dt = tClamped - (Tj + Ta);
+        const v2 = 0.5 * Jmax * Math.pow(Tj, 2) + Amax * Ta;
+        const s2 =
+          (1 / 6) * Jmax * Math.pow(Tj, 3) +
+          (0.5 * Jmax * Math.pow(Tj, 2)) * Ta +
+          0.5 * Amax * Math.pow(Ta, 2);
+        a = Amax - Jmax * dt;
+        v = v2 + Amax * dt - 0.5 * Jmax * Math.pow(dt, 2);
+        s =
+          s2 +
+          v2 * dt +
+          0.5 * Amax * Math.pow(dt, 2) -
+          (1 / 6) * Jmax * Math.pow(dt, 3);
+      }
+    } else if (tClamped <= Tacc + Tv) {
+      // CRUISING REGION (Phase 4: a = 0, v = Vmax)
+      const dt = tClamped - Tacc;
+      const sAcc = 0.5 * Vmax * Tacc;
+      a = 0;
+      v = Vmax;
+      s = sAcc + Vmax * dt;
+    } else {
+      // DECELERATION REGION (Phases 5, 6, 7) - Symmetric backward integration from endpoint T
+      const dtEnd = T - tClamped;
+      let sDec = 0;
+      let vDec = 0;
+      let aDec = 0;
+
+      if (dtEnd <= Tj) {
+        // Phase 7 backward: Jerk ramp (+J to arrest motion)
+        aDec = Jmax * dtEnd;
+        vDec = 0.5 * Jmax * Math.pow(dtEnd, 2);
+        sDec = (1 / 6) * Jmax * Math.pow(dtEnd, 3);
+      } else if (dtEnd <= Tj + Ta) {
+        // Phase 6 backward: Constant deceleration plateau
+        const dt = dtEnd - Tj;
+        const v1 = 0.5 * Jmax * Math.pow(Tj, 2);
+        const s1 = (1 / 6) * Jmax * Math.pow(Tj, 3);
+        aDec = Amax;
+        vDec = v1 + Amax * dt;
+        sDec = s1 + v1 * dt + 0.5 * Amax * Math.pow(dt, 2);
+      } else {
+        // Phase 5 backward: Jerk ramp-down into decel (-J)
+        const dt = dtEnd - (Tj + Ta);
+        const v2 = 0.5 * Jmax * Math.pow(Tj, 2) + Amax * Ta;
+        const s2 =
+          (1 / 6) * Jmax * Math.pow(Tj, 3) +
+          (0.5 * Jmax * Math.pow(Tj, 2)) * Ta +
+          0.5 * Amax * Math.pow(Ta, 2);
+        aDec = Amax - Jmax * dt;
+        vDec = v2 + Amax * dt - 0.5 * Jmax * Math.pow(dt, 2);
+        sDec =
+          s2 +
+          v2 * dt +
+          0.5 * Amax * Math.pow(dt, 2) -
+          (1 / 6) * Jmax * Math.pow(dt, 3);
+      }
+
+      s = dq - sDec;
+      v = vDec;
+      a = -aDec;
+    }
+
+    return {
+      q: q0 + s,
+      qd: v,
+      qdd: a,
+    };
   }
 
   /**

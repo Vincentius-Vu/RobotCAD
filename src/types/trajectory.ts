@@ -4,6 +4,7 @@ export type TrajectoryInterpolationType =
   | 'cubic'
   | 'quintic'
   | 'lspb'
+  | 's-curve'
   | 'cartesian-linear';
 
 export interface Waypoint {

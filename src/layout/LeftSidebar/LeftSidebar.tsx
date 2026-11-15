@@ -426,6 +426,7 @@ export const LeftSidebar: React.FC = () => {
                 className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-purple-500 font-mono"
               >
                 <option value="quintic">Quintic Spline (Zero Jerk)</option>
+                <option value="s-curve">7-Segment S-Curve (Jerk-Bounded)</option>
                 <option value="cubic">Cubic Polynomial</option>
                 <option value="lspb">LSPB (Trapezoidal Velocity)</option>
                 <option value="cartesian-linear">Cartesian Straight Line (SLERP)</option>
