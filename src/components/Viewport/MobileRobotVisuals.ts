@@ -444,14 +444,16 @@ export class MobileRobotVisuals {
       modelUrl,
       (gltf) => {
         const root = gltf.scene;
-        // Bounding box: ~0.386m length, 0.277m width, 0.237m height
         // Scale meters to millimeters (x1000)
         root.scale.set(1000, 1000, 1000);
         // Onshape CAD coordinates: Z is up, X is lateral, Y is longitudinal
         // Convert to Three.js coordinates: Y is up, X is lateral, Z is longitudinal
         root.rotateX(-Math.PI / 2);
-        // Bottom of wheels is at Z = -121.8mm in CAD, align to ground plane Y = 0
-        root.position.set(0, 121.8, 0);
+
+        // Dynamically compute bounding box to align tires cleanly on ground Y = 0 and center on vehicle origin
+        const bbox = new THREE.Box3().setFromObject(root);
+        const center = bbox.getCenter(new THREE.Vector3());
+        root.position.set(-center.x, -bbox.min.y, -center.z);
 
         root.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
