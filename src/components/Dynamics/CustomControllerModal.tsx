@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useRobotStore } from '../../store/robotStore';
 import { useTranslation } from '../../i18n';
 import {
@@ -16,6 +16,8 @@ import {
   BookOpen,
   Trash2,
   FileCode,
+  Upload,
+  Download,
 } from 'lucide-react';
 
 interface CustomControllerModalProps {
@@ -54,8 +56,136 @@ export const CustomControllerModal: React.FC<CustomControllerModalProps> = ({
   } | null>(null);
 
   const [showCheatsheet, setShowCheatsheet] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        let content = (event.target?.result as string) || '';
+
+        // Extract metadata comments if present
+        const nameMatch = content.match(/RobotCAD Custom Controller:\s*([^\r\n]+)/i);
+        const idMatch = content.match(/ID:\s*([^\r\n]+)/i);
+        const descMatch = content.match(/Description:\s*([^\r\n]+)/i);
+        const catMatch = content.match(/Category:\s*([^\r\n]+)/i);
+
+        // Infer name and id from file name if not found in header
+        const baseName = file.name.replace(/\.(controller|script)?\.(ts|js|txt)$/i, '').replace(/[_\-\.]+/g, ' ');
+        const cleanName = baseName.charAt(0).toUpperCase() + baseName.slice(1);
+
+        if (nameMatch && nameMatch[1]) {
+          setName(nameMatch[1].trim());
+        } else {
+          setName(cleanName);
+        }
+
+        if (idMatch && idMatch[1]) {
+          setId(idMatch[1].trim());
+        } else {
+          setId(file.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-'));
+        }
+
+        if (descMatch && descMatch[1]) {
+          setDescription(descMatch[1].trim());
+        }
+
+        if (catMatch && catMatch[1]) {
+          const cat = catMatch[1].trim().toLowerCase();
+          if (['classical', 'robust', 'impedance', 'optimal', 'custom'].includes(cat)) {
+            setCategory(cat as any);
+          }
+        }
+
+        // If user provided a full TypeScript function definition, extract its body:
+        // e.g. export default function computeTorque(...) { ... }
+        const fnMatch = content.match(/function\s*(?:computeTorque)?\s*\([^)]*\)[^{]*\{([\s\S]*)\}\s*$/);
+        if (fnMatch && fnMatch[1]) {
+          content = fnMatch[1].trim();
+        }
+
+        setScriptCode(content);
+        setTestResult({
+          success: true,
+          message: isVi
+            ? `Đã nạp thành công tệp "${file.name}"! Nhấn "Chạy Thử" để kiểm tra tính hợp lệ.`
+            : `Successfully imported "${file.name}"! Click "Dry-Run Evaluate" to test.`,
+        });
+      } catch (err: any) {
+        setTestResult({
+          success: false,
+          message: isVi ? `Lỗi khi nạp tệp: ${err.message}` : `Error reading file: ${err.message}`,
+        });
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleFileExport = () => {
+    const cleanId = id.trim() || `custom-${Date.now()}`;
+    const cleanName = name.trim() || 'Custom RobotCAD Controller';
+
+    const tsContent = `/**
+ * RobotCAD Custom Controller: ${cleanName}
+ * ID: ${cleanId}
+ * Category: ${category}
+ * Description: ${description || 'User-defined dynamic controller for RobotCAD'}
+ * Generated: ${new Date().toISOString()}
+ */
+
+export interface ControllerContext {
+  qRad: number[];
+  qdRad: number[];
+  qDesiredRad: number[];
+  qdDesiredRad: number[];
+  qddDesiredRad: number[];
+  dhParams: any[];
+  inertiaList: any[];
+  gains: { kp: number[]; kd: number[]; ki?: number[] };
+  gravityAcc?: number;
+  externalTorqueDisturbance?: number[];
+  reflectedRotorInertias?: number[];
+}
+
+export interface ControllerOutput {
+  tau: number[];
+  tauGravity?: number[];
+  tauInertia?: number[];
+  tauCoriolis?: number[];
+  errorRad?: number[];
+  errorDotRad?: number[];
+  slidingSurface?: number[];
+  diagnostics?: Record<string, any>;
+}
+
+export default function computeTorque(
+  ctx: ControllerContext,
+  RNE: any,
+  Kinematics: any
+): ControllerOutput {
+${scriptCode
+  .split('\n')
+  .map((line) => '  ' + line)
+  .join('\n')}
+}
+`;
+
+    const blob = new Blob([tsContent], { type: 'text/typescript;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${cleanId}.controller.ts`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const handleSelectTemplate = (templateId: string) => {
     const t = CONTROLLER_TEMPLATES.find((item) => item.id === templateId);
@@ -194,12 +324,47 @@ export const CustomControllerModal: React.FC<CustomControllerModalProps> = ({
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {/* Top Bar: Template Selector & Info */}
-          <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center space-x-2">
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <span className="text-xs font-mono font-bold text-slate-300">{isVi ? 'Chọn mẫu thuật toán (Templates):' : 'Select Algorithm Template:'}</span>
+          <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center space-x-2">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span className="text-xs font-mono font-bold text-slate-300">
+                  {isVi ? 'Mẫu thuật toán chuẩn (Presets):' : 'Select Algorithm Template:'}
+                </span>
+              </div>
+
+              {/* Import / Export File Actions */}
+              <div className="flex items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".ts,.js,.txt"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-mono font-semibold rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 transition shadow"
+                  title={isVi ? 'Nạp tệp thuật toán .ts hoặc .js từ máy tính' : 'Import controller code from a local .ts or .js file'}
+                >
+                  <Upload className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>{isVi ? 'Nạp tệp .ts / .js' : 'Import .ts / .js'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleFileExport}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-mono font-semibold rounded-lg bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/40 transition shadow"
+                  title={isVi ? 'Tải mã nguồn này về máy tính dưới dạng module TypeScript (.ts)' : 'Export this controller as a standalone TypeScript (.ts) module'}
+                >
+                  <Download className="w-3.5 h-3.5 text-sky-400" />
+                  <span>{isVi ? 'Xuất tệp .ts' : 'Export .ts'}</span>
+                </button>
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-1.5">
+
+            <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-850">
               {CONTROLLER_TEMPLATES.map((tmpl) => (
                 <button
                   key={tmpl.id}

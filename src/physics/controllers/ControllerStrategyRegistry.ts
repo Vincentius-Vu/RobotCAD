@@ -488,6 +488,118 @@ export interface CustomControllerDefinition {
 
 export const CONTROLLER_TEMPLATES: CustomControllerDefinition[] = [
   {
+    id: 'custom-smc-boundary',
+    name: 'Sliding Mode Control (SMC + Boundary Layer)',
+    category: 'robust',
+    description: 'Mặt trượt s = e_dot + lambda*e với hàm bão hòa sat(s/epsilon) triệt tiêu chattering',
+    scriptCode: `// Sliding Mode Controller (SMC) with Boundary Layer Saturation
+// Triệt tiêu chattering và bảo đảm tính bền vững Lyapunov
+const { dhParams, inertiaList, qRad, qdRad, qDesiredRad, qdDesiredRad, qddDesiredRad, gains, gravityAcc } = ctx;
+const n = qRad.length;
+
+// 1. Tính sai số vị trí e và sai số vận tốc e_dot
+const error = qDesiredRad.map((qd, i) => qd - qRad[i]);
+const errorDot = qdDesiredRad.map((qdd, i) => qdd - qdRad[i]);
+
+// 2. Tham số mặt trượt (lambda) và độ dày lớp biên (epsilon)
+const lambda = 12.0;    // Độ dốc hội tụ mặt trượt
+const Ks = 25.0;        // Hệ số bù trượt chuyển mạch
+const epsilon = 0.08;   // Bề dày lớp biên sat(s/epsilon)
+
+// 3. Tính mặt trượt s = errorDot + lambda * error
+const s = [];
+for (let i = 0; i < n; i++) {
+  s.push(errorDot[i] + lambda * error[i]);
+}
+
+// 4. Lấy ma trận khối lượng M(q) và ma trận trọng trường g(q) từ RNEA
+const zeroArr = new Array(n).fill(0);
+const { tau: tauGrav } = RNE.computeInverseDynamics(dhParams, inertiaList, qRad, zeroArr, zeroArr, gravityAcc);
+const coriolisRes = RNE.computeInverseDynamics(dhParams, inertiaList, qRad, qdRad, zeroArr, 0);
+const M = RNE.computeMassMatrix(dhParams, inertiaList, qRad, ctx.reflectedRotorInertias);
+
+// 5. Luật điều khiển tương đương + Luật chuyển mạch bão hòa liên tục
+const tau = [];
+for (let i = 0; i < n; i++) {
+  // Hàm bão hòa sat(s / epsilon) mượt mà thay vì hàm dấu sgn(s) gây rung động cơ
+  const sat = Math.max(-1.0, Math.min(1.0, s[i] / epsilon));
+  const robustSwitching = Ks * sat;
+  
+  // u_eq = qdd_d + lambda * errorDot
+  const aEq = (qddDesiredRad[i] || 0) + lambda * errorDot[i];
+  let M_aEq = 0;
+  for (let j = 0; j < n; j++) M_aEq += M[i][j] * aEq;
+
+  const command = M_aEq + coriolisRes.tauCoriolis[i] + tauGrav[i] + robustSwitching;
+  const maxT = inertiaList[i]?.maxTorque || 150;
+  tau.push(Math.max(-maxT, Math.min(maxT, command)));
+}
+
+return {
+  tau,
+  tauGravity: tauGrav,
+  tauInertia: zeroArr,
+  tauCoriolis: coriolisRes.tauCoriolis,
+  errorRad: error,
+  errorDotRad: errorDot,
+  slidingSurface: s,
+  diagnostics: {
+    maxSlidingSurface: Math.max(...s.map(Math.abs)),
+  },
+};`,
+  },
+  {
+    id: 'custom-double-tanh-ctc',
+    name: 'Double-Tanh Trajectory Tracking (Double-Tanh CTC)',
+    category: 'optimal',
+    description: 'Bộ điều khiển Computed Torque đồng bộ hoá với luật sinh quỹ đạo C^inf Double-Tanh',
+    scriptCode: `// Double-Tanh Trajectory Tracking via Computed Torque Control (CTC)
+// Tận dụng quỹ đạo khả vi vô hạn C^inf để triệt tiêu sốc mô-men xoắn (Dirac snap)
+const { dhParams, inertiaList, qRad, qdRad, qDesiredRad, qdDesiredRad, qddDesiredRad, gains, gravityAcc } = ctx;
+const n = qRad.length;
+
+// 1. Tính toán sai số bám trạng thái
+const error = qDesiredRad.map((qd, i) => qd - qRad[i]);
+const errorDot = qdDesiredRad.map((qdd, i) => qdd - qdRad[i]);
+
+// 2. Tính toán ma trận động lực học mô hình chuẩn: M(q), C(q, qd), g(q)
+const zeroArr = new Array(n).fill(0);
+const { tau: tauGrav } = RNE.computeInverseDynamics(dhParams, inertiaList, qRad, zeroArr, zeroArr, gravityAcc);
+const coriolisRes = RNE.computeInverseDynamics(dhParams, inertiaList, qRad, qdRad, zeroArr, 0);
+const M = RNE.computeMassMatrix(dhParams, inertiaList, qRad, ctx.reflectedRotorInertias);
+
+// 3. Tín hiệu gia tốc điều khiển danh định v_i = qdd_d + Kp*e + Kd*edot
+const v = [];
+for (let i = 0; i < n; i++) {
+  const kp = gains.kp[i] || 180;
+  const kd = 2.0 * Math.sqrt(kp); // Hệ số suy giảm tới hạn (Critical Damping zeta = 1)
+  v.push((qddDesiredRad[i] || 0) + kp * error[i] + kd * errorDot[i]);
+}
+
+// 4. Luật bù tuyến tính hoá hồi tiếp: tau = M(q)*v + C(q, qd)*qd + g(q)
+const tau = [];
+for (let i = 0; i < n; i++) {
+  let Mv = 0;
+  for (let j = 0; j < n; j++) Mv += M[i][j] * v[j];
+  
+  const rawTau = Mv + coriolisRes.tauCoriolis[i] + tauGrav[i];
+  const maxT = inertiaList[i]?.maxTorque || 150;
+  tau.push(Math.max(-maxT, Math.min(maxT, rawTau)));
+}
+
+return {
+  tau,
+  tauGravity: tauGrav,
+  tauInertia: zeroArr,
+  tauCoriolis: coriolisRes.tauCoriolis,
+  errorRad: error,
+  errorDotRad: errorDot,
+  diagnostics: {
+    trackingNorm: Math.hypot(...error),
+  },
+};`,
+  },
+  {
     id: 'custom-adrc',
     name: 'Active Disturbance Rejection Control (ADRC + ESO)',
     category: 'robust',
