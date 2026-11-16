@@ -63,7 +63,8 @@ class RobotLoaderService {
    * Fetches and parses robot.xml from the undergraduate robots repository
    */
   public async loadRobotDefinition(robotId: string): Promise<RobotModel> {
-    const xmlUrl = `/robots/${robotId}/robot.xml`;
+    const baseUrl = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+    const xmlUrl = `${baseUrl}/robots/${robotId}/robot.xml`;
     const response = await fetch(xmlUrl);
     if (!response.ok) {
       throw new Error(`Failed to load robot XML configuration from ${xmlUrl} (Status: ${response.status})`);
@@ -153,7 +154,8 @@ class RobotLoaderService {
       return this.geometryCache.get(cacheKey)!.clone();
     }
 
-    const stlUrl = `/robots/${robotId}/${fileName}`;
+    const baseUrl = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+    const stlUrl = `${baseUrl}/robots/${robotId}/${fileName}`;
     return new Promise((resolve, reject) => {
       this.stlLoader.load(
         stlUrl,

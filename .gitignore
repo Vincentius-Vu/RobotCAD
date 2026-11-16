@@ -79,3 +79,8 @@ __pycache__/
 *.toc
 *.run.xml
 *.bcf
+
+# Research & Internal Lab Drafts (keep local, do not push to public GitHub)
+research/
+output/
+
