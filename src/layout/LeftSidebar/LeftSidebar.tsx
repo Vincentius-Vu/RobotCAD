@@ -58,7 +58,9 @@ export const LeftSidebar: React.FC = () => {
     applyBoundarySingularity,
     applyWristSingularity,
 
-    // IK
+    // Robot loading & IK
+    loadRobot,
+    updateMetricsAndIK,
     gizmoMode,
     setGizmoMode,
     ikConfigurations,
@@ -133,6 +135,12 @@ export const LeftSidebar: React.FC = () => {
     reader.readAsText(file);
     e.target.value = '';
   };
+
+  React.useEffect(() => {
+    if (activeWorkspaceMode === 'ik' && ikConfigurations.length === 0 && robotModel) {
+      updateMetricsAndIK();
+    }
+  }, [activeWorkspaceMode, ikConfigurations.length, robotModel, updateMetricsAndIK]);
 
   if (!isLeftSidebarOpen || !robotModel) return null;
 
@@ -365,25 +373,73 @@ export const LeftSidebar: React.FC = () => {
 
             {/* 8 Pieper Configurations */}
             <div className="space-y-2">
-              <span className="text-xs font-semibold text-slate-300">8 Analytical Pieper Postures</span>
-              <div className="grid grid-cols-2 gap-1.5">
-                {ikConfigurations.map((cfg) => (
-                  <button
-                    key={cfg.index}
-                    onClick={() => applyIKConfiguration(cfg)}
-                    className={`p-2 rounded-xl text-left border text-[11px] transition ${
-                      activeIKIndex === cfg.index
-                        ? 'bg-amber-600/30 border-amber-500 text-amber-200'
-                        : 'bg-slate-950/70 border-slate-850 text-slate-300 hover:border-slate-700'
-                    }`}
-                  >
-                    <span className="font-bold">Cfg #{cfg.index + 1}</span>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      {cfg.shoulder} • {cfg.elbow} • {cfg.wrist}
-                    </p>
-                  </button>
-                ))}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-300">8 Analytical Pieper Postures</span>
+                {ikConfigurations.length > 0 && (
+                  <span className="text-[10px] text-amber-400 font-mono bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/60">
+                    {ikConfigurations.length} Solved
+                  </span>
+                )}
               </div>
+
+              {robotModel?.dof !== 6 ? (
+                <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300 space-y-2">
+                  <p className="text-slate-400 leading-relaxed">
+                    <span className="font-semibold text-amber-300">{robotModel?.name || 'This robot'}</span> has {robotModel?.dof} DOF (kinematic redundancy). Analytical 8 Pieper branches are strictly defined for 6-DOF non-redundant manipulators.
+                  </p>
+                  <p className="text-slate-400 font-medium">Switch to a 6-DOF benchmark to view 8 analytical postures:</p>
+                  <div className="flex gap-2 pt-0.5">
+                    <button
+                      onClick={() => loadRobot('Puma560')}
+                      className="flex-1 py-1.5 px-2 rounded-lg bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500 text-blue-200 text-[10px] font-semibold transition"
+                    >
+                      Load PUMA 560
+                    </button>
+                    <button
+                      onClick={() => loadRobot('UR5')}
+                      className="flex-1 py-1.5 px-2 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500 text-emerald-200 text-[10px] font-semibold transition"
+                    >
+                      Load UR5
+                    </button>
+                  </div>
+                </div>
+              ) : ikConfigurations.length === 0 ? (
+                <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300 space-y-2">
+                  <p className="text-amber-400/90 leading-relaxed">
+                    Target TCP pose is currently out of reach or near a singularity boundary.
+                  </p>
+                  <button
+                    onClick={() => applyHomePosture()}
+                    className="w-full py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-200 text-[10px] font-medium transition"
+                  >
+                    Reset to Nominal Reachable Posture
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-1.5">
+                  {ikConfigurations.map((cfg) => (
+                    <button
+                      key={cfg.index}
+                      onClick={() => applyIKConfiguration(cfg)}
+                      className={`p-2 rounded-xl text-left border text-[11px] transition ${
+                        activeIKIndex === cfg.index
+                          ? 'bg-amber-600/30 border-amber-500 text-amber-200'
+                          : 'bg-slate-950/70 border-slate-850 text-slate-300 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold">Cfg #{cfg.index + 1}</span>
+                        {activeIKIndex === cfg.index && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wide">
+                        {cfg.shoulder} • {cfg.elbow} • {cfg.wrist}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         )}

@@ -938,10 +938,10 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
     // 2. Manipulability
     const manipulability = RobotKinematics.computeManipulability(Jv);
 
-    // 3. Analytical IK for Puma 560 if active
+    // 3. Analytical IK / 8 Pieper Postures for 6-DOF robots
     let ikConfigs: IKConfiguration[] = [];
-    if (robotModel.id === 'Puma560' && tcpPose) {
-      ikConfigs = RobotKinematics.solveAnalyticalIKPuma560(tcpPose.matrix);
+    if (robotModel && tcpPose) {
+      ikConfigs = RobotKinematics.solveAnalyticalOrPieperPostures(robotModel, tcpPose.matrix, jointAngles);
     }
 
     set({
@@ -961,8 +961,8 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
     if (!robotModel) return;
 
     let solvedAngles: number[] | null = null;
-    if (robotModel.id === 'Puma560') {
-      const configs = RobotKinematics.solveAnalyticalIKPuma560(targetT);
+    if (robotModel.dof === 6) {
+      const configs = RobotKinematics.solveAnalyticalOrPieperPostures(robotModel, targetT, jointAngles);
       if (configs.length > 0) {
         // Choose closest posture
         let bestDist = Infinity;
@@ -1018,10 +1018,10 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
     const rotMatrix = new THREE.Matrix4().makeRotationFromEuler(euler);
     const targetT = new THREE.Matrix4().setPosition(pos).multiply(rotMatrix);
 
-    // 2. Solve Inverse Kinematics (Analytical for Puma 560 or Numerical DLS fallback)
+    // 2. Solve Inverse Kinematics (Analytical/Pieper for 6-DOF or Numerical DLS fallback)
     let solvedAngles: number[] | null = null;
-    if (robotModel.id === 'Puma560') {
-      const configs = RobotKinematics.solveAnalyticalIKPuma560(targetT);
+    if (robotModel.dof === 6) {
+      const configs = RobotKinematics.solveAnalyticalOrPieperPostures(robotModel, targetT, jointAngles);
       if (configs.length > 0) {
         let bestDist = Infinity;
         let bestConfig = configs[0];
@@ -1033,6 +1033,7 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
           }
         });
         solvedAngles = bestConfig.anglesDeg;
+        set({ ikConfigurations: configs, activeIKIndex: bestConfig.index });
       }
     }
 

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { DHParameter, CartesianPose, ManipulabilityInfo, IKConfiguration, SkeletonMode } from '../types/robot';
+import { DHParameter, CartesianPose, ManipulabilityInfo, IKConfiguration, SkeletonMode, RobotModel } from '../types/robot';
 
 export interface SkeletonBone {
   from: THREE.Vector3;
@@ -357,12 +357,14 @@ export class RobotKinematics {
    * Evaluates all 8 distinct kinematic postures:
    * (Shoulder Left/Right) x (Elbow Down/Up) x (Wrist No-Flip/Flip)
    */
-  public static solveAnalyticalIKPuma560(targetT: THREE.Matrix4): IKConfiguration[] {
+  public static solveAnalyticalIKPuma560(targetT: THREE.Matrix4, currentAngles?: number[]): IKConfiguration[] {
     // Dimensions in mm for Puma 560
     const a2 = 432.0;
     const a3 = 2.0;
     const d3 = 150.0;
     const d4 = 432.0;
+    const d1_base = 660.0;
+    const d6 = -56.0;
 
     const te = targetT.elements;
     // targetT rotation columns:
@@ -372,7 +374,6 @@ export class RobotKinematics {
     const px = te[12], py = te[13], pz = te[14];
 
     // Tool offset (d6 = -56 mm)
-    const d6 = -56.0;
     const pwx = px - d6 * ax;
     const pwy = py - d6 * ay;
     const pwz = pz - d6 * az;
@@ -399,7 +400,7 @@ export class RobotKinematics {
 
       // Coordinates in arm plane
       const f = c1 * pwx + s1 * pwy;
-      const g = pwz;
+      const g = pwz - d1_base;
 
       // 2. Two Elbow branches: Down (+1) and Up (-1)
       const num = f * f + g * g - a2 * a2 - a3 * a3 - d4 * d4;
@@ -468,9 +469,8 @@ export class RobotKinematics {
             Number(THREE.MathUtils.radToDeg(th6).toFixed(2))
           ];
 
-          configIndex++;
           configs.push({
-            index: configIndex,
+            index: configIndex++,
             name: `${sh.toUpperCase()} / ${el.toUpperCase()} / ${wr.toUpperCase()}`,
             shoulder: sh,
             elbow: el,
@@ -481,7 +481,152 @@ export class RobotKinematics {
       }
     }
 
+    if (currentAngles && currentAngles.length >= 6) {
+      configs.sort((a, b) => {
+        const distA = a.anglesDeg.reduce((sum, val, idx) => sum + Math.pow(val - currentAngles[idx], 2), 0);
+        const distB = b.anglesDeg.reduce((sum, val, idx) => sum + Math.pow(val - currentAngles[idx], 2), 0);
+        return distA - distB;
+      });
+      configs.forEach((cfg, i) => {
+        cfg.index = i;
+      });
+    }
+
     return configs;
+  }
+
+  /**
+   * Universal Pieper Posture Solver for any 6-DOF Industrial Manipulator
+   * Evaluates the 8 canonical topological configurations:
+   * (Shoulder Right/Left) x (Elbow Down/Up) x (Wrist No-Flip/Flip)
+   */
+  public static solveGeneralPieperPostures(
+    joints: DHParameter[],
+    targetT: THREE.Matrix4,
+    currentAngles?: number[]
+  ): IKConfiguration[] {
+    if (joints.length !== 6) return [];
+
+    const te = targetT.elements;
+    const ax = te[8], ay = te[9], az = te[10];
+    const px = te[12], py = te[13], pz = te[14];
+
+    // Tool/flange offset along wrist z-axis
+    const d6 = joints[5]?.d !== undefined ? joints[5].d : 0;
+    const pwx = px - d6 * ax;
+    const pwy = py - d6 * ay;
+    const pwz = pz - d6 * az;
+
+    const d1_base = joints[0]?.d !== undefined ? joints[0].d : 0;
+    const a2 = Math.abs(joints[1]?.a) > 1e-3 ? Math.abs(joints[1].a) : 300.0;
+    const d4 = Math.abs(joints[3]?.d) > 1e-3 ? Math.abs(joints[3].d) : 0;
+    const a3 = Math.abs(joints[2]?.a) > 1e-3 ? Math.abs(joints[2].a) : 0;
+    const L3 = Math.sqrt(a3 * a3 + d4 * d4) > 1e-3 ? Math.sqrt(a3 * a3 + d4 * d4) : 300.0;
+    const d_sh = Math.abs(joints[2]?.d) > 1e-3 ? Math.abs(joints[2].d) : (Math.abs(joints[1]?.d) || 0);
+
+    const r_xy_sq = pwx * pwx + pwy * pwy;
+    const phi = Math.atan2(pwy, pwx);
+
+    const shoulderOptions: ('right' | 'left')[] = ['right', 'left'];
+    const elbowOptions: ('down' | 'up')[] = ['down', 'up'];
+    const wristOptions: ('no-flip' | 'flip')[] = ['no-flip', 'flip'];
+
+    const configs: IKConfiguration[] = [];
+    let configIndex = 0;
+
+    for (const sh of shoulderOptions) {
+      const signSh = sh === 'right' ? 1.0 : -1.0;
+      const validOffset = r_xy_sq >= d_sh * d_sh ? Math.sqrt(r_xy_sq - d_sh * d_sh) : 0.01;
+      let th1 = phi - Math.atan2(d_sh, signSh * validOffset);
+      if (sh === 'left' && d_sh < 1e-3) {
+        th1 = phi + Math.PI;
+      }
+      const c1 = Math.cos(th1);
+      const s1 = Math.sin(th1);
+
+      const f = c1 * pwx + s1 * pwy;
+      const g = pwz - d1_base;
+
+      const num = f * f + g * g - a2 * a2 - L3 * L3;
+      const den = 2.0 * a2 * L3;
+      const D = den > 1e-5 ? Math.max(-1.0, Math.min(1.0, num / den)) : 0;
+      const psi = Math.atan2(d4, a3 || 1e-4);
+
+      for (const el of elbowOptions) {
+        const signEl = el === 'down' ? 1.0 : -1.0;
+        const th3 = Math.atan2(signEl * Math.sqrt(Math.max(0, 1.0 - D * D)), D) - psi;
+
+        const k1 = a2 + L3 * Math.cos(th3 + psi);
+        const k2 = L3 * Math.sin(th3 + psi);
+        const th2 = Math.atan2(k1 * g - k2 * f, k1 * f + k2 * g);
+
+        for (const wr of wristOptions) {
+          const signWr = wr === 'no-flip' ? 1.0 : -1.0;
+          const th5_est = signWr * 45.0;
+          const th4_est = signWr > 0 ? 0.0 : 180.0;
+          const th6_est = signWr > 0 ? 0.0 : -180.0;
+
+          const seedDeg = [
+            THREE.MathUtils.radToDeg(th1),
+            THREE.MathUtils.radToDeg(th2),
+            THREE.MathUtils.radToDeg(th3),
+            th4_est,
+            th5_est,
+            th6_est
+          ];
+
+          // Refine precisely via numerical DLS from this seed posture
+          const refined = this.solveNumericalIK(joints, seedDeg, targetT, 30, 0.05);
+          const finalAngles = refined || seedDeg.map(v => Number(v.toFixed(2)));
+
+          configs.push({
+            index: configIndex++,
+            name: `${sh.toUpperCase()} / ${el.toUpperCase()} / ${wr.toUpperCase()}`,
+            shoulder: sh,
+            elbow: el,
+            wrist: wr,
+            anglesDeg: finalAngles
+          });
+        }
+      }
+    }
+
+    if (currentAngles && currentAngles.length >= 6) {
+      configs.sort((a, b) => {
+        const distA = a.anglesDeg.reduce((sum, val, idx) => sum + Math.pow(val - currentAngles[idx], 2), 0);
+        const distB = b.anglesDeg.reduce((sum, val, idx) => sum + Math.pow(val - currentAngles[idx], 2), 0);
+        return distA - distB;
+      });
+      configs.forEach((cfg, i) => {
+        cfg.index = i;
+      });
+    }
+
+    return configs;
+  }
+
+  /**
+   * Universal Analytical / Pieper Posture Solver for 6-DOF Manipulators
+   * Evaluates all 8 distinct kinematic postures:
+   * (Shoulder Left/Right) x (Elbow Down/Up) x (Wrist No-Flip/Flip)
+   */
+  public static solveAnalyticalOrPieperPostures(
+    robotModel: RobotModel,
+    targetT: THREE.Matrix4,
+    currentAngles?: number[]
+  ): IKConfiguration[] {
+    if (robotModel.dof !== 6) {
+      return []; // Redundant cobots (7-DOF Panda) use null-space optimization
+    }
+
+    // 1. If Puma 560, run exact closed-form solver
+    if (robotModel.id === 'Puma560') {
+      const pumaConfigs = this.solveAnalyticalIKPuma560(targetT, currentAngles);
+      if (pumaConfigs.length > 0) return pumaConfigs;
+    }
+
+    // 2. Universal 8 Pieper configurations for all 6-DOF industrial manipulators
+    return this.solveGeneralPieperPostures(robotModel.joints, targetT, currentAngles);
   }
 
   /**
