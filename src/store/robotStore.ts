@@ -483,7 +483,7 @@ function startDynamicsLoop(get: any, set: any) {
         currentDCBusState = PowerConverterEngine.createInitialState(robotModel.dof, dcBusSettings);
       }
 
-      const liveBusVoltage = currentDCBusState.voltageV;
+      const liveBusVoltage = currentDCBusState?.voltageV || dcBusSettings?.nominalVoltage || 48.0;
 
       for (let j = 0; j < robotModel.dof; j++) {
         const baseMotorParam =

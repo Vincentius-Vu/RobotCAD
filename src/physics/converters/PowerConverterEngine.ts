@@ -111,18 +111,30 @@ export class PowerConverterEngine {
     const synthesizedVoltages = new Array(dof).fill(0);
     const updatedAxisStates: AxisInverterState[] = [];
 
-    const C_bus = Math.max(1e-4, busParams.busCapacitanceMicroFarad * 1e-6); // Farads
-    const currentVdc = Math.max(10.0, prevState.voltageV);
+    const busCapUf = busParams.busCapacitanceMicroFarad ?? 4700;
+    const C_bus = Math.max(1e-4, busCapUf * 1e-6); // Farads
+    const nominalV = busParams.nominalVoltage ?? 48.0;
+    const currentVdc = (typeof prevState?.voltageV === 'number' && !isNaN(prevState.voltageV) && prevState.voltageV > 0)
+      ? prevState.voltageV
+      : nominalV;
 
     // Maximum synthesizable fundamental line-to-neutral voltage
     // For Space Vector PWM (SVPWM): V_max = V_dc / sqrt(3) ~= 0.577 * V_dc
     // For Sinusoidal PWM (SPWM): V_max = V_dc / 2.0 = 0.5 * V_dc
     const vMaxSVPWM = currentVdc / Math.sqrt(3);
     const vMaxSPWM = currentVdc * 0.5;
-    const vMax = inverterParams.modulationScheme === 'svpwm' ? vMaxSVPWM : vMaxSPWM;
+    const vMax = (inverterParams?.modulationScheme ?? 'svpwm') === 'svpwm' ? vMaxSVPWM : vMaxSPWM;
 
-    const Tsw = 1.0 / Math.max(1000, inverterParams.switchingFrequencyHz);
-    const tDead = Math.max(0, inverterParams.deadTimeMicrosec * 1e-6);
+    const fSw = inverterParams?.switchingFrequencyHz ?? 16000;
+    const Tsw = 1.0 / Math.max(1000, fSw);
+    const deadTimeUs = inverterParams?.deadTimeMicrosec ?? 1.2;
+    const tDead = Math.max(0, deadTimeUs * 1e-6);
+    const onRes = inverterParams?.onResistance ?? 0.025;
+    const swLossCoeff = inverterParams?.switchingLossCoeff ?? 1.8;
+    const ambTemp = inverterParams?.ambientTemperatureC ?? 25.0;
+    const rth_ca = inverterParams?.thermalResistanceCaseAmbient ?? 2.2;
+    const rth_jc = inverterParams?.thermalResistanceJunctionCase ?? 0.85;
+    const cth = inverterParams?.heatsinkThermalCapacitance ?? 15.0;
 
     // 1. Process each axis inverter
     for (let i = 0; i < dof; i++) {
@@ -147,28 +159,28 @@ export class PowerConverterEngine {
 
       // Inverter Losses:
       // Conduction Loss: 3 phases * (R_on * I_rms^2 + V_on * I_rms / sqrt(2))
-      const pCond = 3 * (inverterParams.onResistance * iRms * iRms + 0.4 * iRms);
+      const pCond = 3 * (onRes * iRms * iRms + 0.4 * iRms);
 
       // Switching Loss: 6 switches * f_sw * k_sw * V_dc * I_rms
-      const pSw = 6 * inverterParams.switchingFrequencyHz * (inverterParams.switchingLossCoeff * 1e-6) * currentVdc * iRms;
+      const pSw = 6 * fSw * (swLossCoeff * 1e-6) * currentVdc * iRms;
 
       const pTotalLoss = pCond + pSw;
       totalInverterLossW += pTotalLoss;
 
       // Thermal Junction Integration
-      const prevAxis = prevState.axisStates[i] || {
-        heatsinkTemperatureC: inverterParams.ambientTemperatureC,
-        junctionTemperatureC: inverterParams.ambientTemperatureC,
+      const prevAxis = prevState?.axisStates?.[i] || {
+        heatsinkTemperatureC: ambTemp,
+        junctionTemperatureC: ambTemp,
       };
 
       // Heatsink temperature derivative: dTh/dt = (Ploss - (Th - Tamb)/Rth_ca) / Cth
       const dThDt =
-        (pTotalLoss - (prevAxis.heatsinkTemperatureC - inverterParams.ambientTemperatureC) / inverterParams.thermalResistanceCaseAmbient) /
-        Math.max(1.0, inverterParams.heatsinkThermalCapacitance);
+        (pTotalLoss - (prevAxis.heatsinkTemperatureC - ambTemp) / rth_ca) /
+        Math.max(1.0, cth);
 
-      const nextTh = Math.max(inverterParams.ambientTemperatureC, prevAxis.heatsinkTemperatureC + dt * dThDt);
+      const nextTh = Math.max(ambTemp, prevAxis.heatsinkTemperatureC + dt * dThDt);
       // Junction temp: Tj = Th + Ploss * Rth_jc
-      const nextTj = nextTh + pTotalLoss * inverterParams.thermalResistanceJunctionCase;
+      const nextTj = nextTh + pTotalLoss * rth_jc;
 
       const efficiency = pElec > 0 ? Math.max(80, Math.min(99.5, (pElec / (pElec + pTotalLoss)) * 100)) : 98.0;
 
@@ -199,10 +211,11 @@ export class PowerConverterEngine {
     const rPS = 0.06; // 60 mOhms internal regulation droop impedance
 
     // Desired power supply current: load current + voltage restoration current
-    const vError = busParams.nominalVoltage - currentVdc;
+    const vError = (busParams.nominalVoltage ?? 48.0) - currentVdc;
+    const psLimit = busParams.powerSupplyCurrentLimit ?? 80.0;
     const targetSupplyCurrentA = Math.max(
       0,
-      Math.min(busParams.powerSupplyCurrentLimit, Math.max(0, inverterBusCurrentA) + vError / rPS)
+      Math.min(psLimit, Math.max(0, inverterBusCurrentA) + vError / rPS)
     );
 
     const prevSupplyCurrentA = prevState.supplyCurrentA || 0;
@@ -211,17 +224,19 @@ export class PowerConverterEngine {
 
     // Dynamic Braking Chopper Logic:
     let isBrakingChopperActive = prevState.isBrakingChopperActive;
-    if (busParams.enableBrakingChopper) {
-      if (currentVdc >= busParams.brakingActivationVoltage) {
+    const brakeActV = busParams.brakingActivationVoltage ?? 56.0;
+    const brakeHystV = busParams.brakingHysteresisVoltage ?? 2.5;
+    if (busParams.enableBrakingChopper ?? true) {
+      if (currentVdc >= brakeActV) {
         isBrakingChopperActive = true;
-      } else if (currentVdc <= busParams.brakingActivationVoltage - busParams.brakingHysteresisVoltage) {
+      } else if (currentVdc <= brakeActV - brakeHystV) {
         isBrakingChopperActive = false;
       }
     } else {
       isBrakingChopperActive = false;
     }
 
-    const rBrake = Math.max(0.5, busParams.brakingResistorOhms);
+    const rBrake = Math.max(0.5, busParams.brakingResistorOhms ?? 4.7);
     const brakingCurrentA = isBrakingChopperActive ? currentVdc / rBrake : 0;
     const brakingPowerW = brakingCurrentA * currentVdc;
 
@@ -240,10 +255,12 @@ export class PowerConverterEngine {
 
     // Physical bounds: DC link cannot reverse polarity (unidirectional rectifier/SMPS)
     // Minimum clamped at 24V (brownout/undervoltage shutdown floor), max at overvoltage safety cutoff
-    nextVdc = Math.max(24.0, Math.min(busParams.overvoltageTripThreshold + 4.0, nextVdc));
+    const ovTrip = busParams.overvoltageTripThreshold ?? 62.0;
+    const uvTrip = busParams.undervoltageTripThreshold ?? 36.0;
+    nextVdc = Math.max(24.0, Math.min(ovTrip + 4.0, nextVdc));
 
-    const isOvervoltageTripped = nextVdc >= busParams.overvoltageTripThreshold;
-    const isUndervoltageTripped = nextVdc <= busParams.undervoltageTripThreshold;
+    const isOvervoltageTripped = nextVdc >= ovTrip;
+    const isUndervoltageTripped = nextVdc <= uvTrip;
 
     return {
       nextState: {

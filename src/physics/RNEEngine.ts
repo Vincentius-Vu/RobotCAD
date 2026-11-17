@@ -385,10 +385,11 @@ export class RNEEngine {
     const n = Math.min(dhParams.length, inertiaList.length);
     const z0: Vec3 = [0, 0, 1];
 
-    // Compute transformation rotation matrices R_{i-1}^i and translation p_{i}^{i-1}
+    // Compute transformation rotation matrices R_{i-1}^i, translation p_{i}^{i-1}, and joint axis in frame i
     const R_prev_curr: Mat3[] = []; // R_{i-1}^i
     const R_curr_prev: Mat3[] = []; // R_i^{i-1}
-    const p_link: Vec3[] = []; // Position of frame i in frame i-1 (in meters)
+    const p_link: Vec3[] = []; // Position of frame i in frame i (in meters): [a, d*sin(alpha), d*cos(alpha)]
+    const z_axis_in_curr: Vec3[] = []; // Joint i axis z_{i-1} in frame i: R_{i-1}^i * [0, 0, 1]^T = [0, sin(alpha), cos(alpha)]
 
     for (let i = 0; i < n; i++) {
       const dh = dhParams[i];
@@ -415,10 +416,15 @@ export class RNEEngine {
       R_curr_prev.push(R_i_prev);
       R_prev_curr.push(R_prev_i);
       p_link.push([a, d * sinAl, d * cosAl]);
+      z_axis_in_curr.push([0, sinAl, cosAl]);
     }
 
     // =========================================================================
     // FORWARD RECURSION (i = 0 to n-1)
+    // Standard DH Recursive Newton-Euler (Craig / Siciliano):
+    // Joint i rotates about axis z_{i-1} of frame i-1:
+    // w_i = R_{i-1}^i * (w_{i-1} + qd_i * z0)
+    // wDot_i = R_{i-1}^i * (wDot_{i-1} + w_{i-1} x (qd_i * z0) + qdd_i * z0)
     // =========================================================================
     const w: Vec3[] = []; // Angular velocity
     const wDot: Vec3[] = []; // Angular acceleration
@@ -436,18 +442,18 @@ export class RNEEngine {
       const qdd = qddRad[i] || 0;
       const r_com: Vec3 = inertiaList[i].com;
 
-      // w_i = R_{i-1}^i * w_{i-1} + qd_i * z0
-      const w_from_prev = multMatVec3(R_p_c, w_prev);
-      const w_i = add3(w_from_prev, scale3(z0, qd));
+      // w_i = R_{i-1}^i * (w_{i-1} + qd_i * z0)
+      const w_in_prev = add3(w_prev, scale3(z0, qd));
+      const w_i = multMatVec3(R_p_c, w_in_prev);
       w.push(w_i);
 
-      // wDot_i = R_{i-1}^i * wDot_{i-1} + (R_{i-1}^i * w_{i-1}) x (qd_i * z0) + qdd_i * z0
-      const wDot_from_prev = multMatVec3(R_p_c, wDot_prev);
-      const gyroscopic = cross3(w_from_prev, scale3(z0, qd));
-      const wDot_i = add3(add3(wDot_from_prev, gyroscopic), scale3(z0, qdd));
+      // wDot_i = R_{i-1}^i * (wDot_{i-1} + w_{i-1} x (qd_i * z0) + qdd_i * z0)
+      const gyroscopic = cross3(w_prev, scale3(z0, qd));
+      const wDot_in_prev = add3(add3(wDot_prev, gyroscopic), scale3(z0, qdd));
+      const wDot_i = multMatVec3(R_p_c, wDot_in_prev);
       wDot.push(wDot_i);
 
-      // pDDot_i = R_{i-1}^i * pDDot_{i-1} + wDot_i x p_i + w_i x (w_i x p_i)
+      // pDDot_i = R_{i-1}^i * pDDot_{i-1} + wDot_i x p_link[i] + w_i x (w_i x p_link[i])
       const pDDot_from_prev = multMatVec3(R_p_c, pDDot_prev);
       const wDot_x_p = cross3(wDot_i, p_link[i]);
       const w_x_w_x_p = cross3(w_i, cross3(w_i, p_link[i]));
@@ -514,10 +520,10 @@ export class RNEEngine {
       const n_i = add3(add3(add3(N_i, n_from_next), r_x_F), p_x_f);
       m_vec[i] = n_i;
 
-      // Joint motor torque tau_i = n_i^T * z0 + friction
+      // Joint motor torque: project n_i onto axis z_{i-1} in frame i: [0, sin(alpha_i), cos(alpha_i)]
       const qd = qdRad[i] || 0;
       const friction = inertia.viscousFriction * qd + inertia.coulombFriction * Math.sign(qd);
-      const rawTau = dot3(n_i, z0) + friction;
+      const rawTau = dot3(n_i, z_axis_in_curr[i]) + friction;
 
       // Motor torque saturation limit
       const clampedTau = Math.max(-inertia.maxTorque, Math.min(inertia.maxTorque, rawTau));
@@ -558,6 +564,7 @@ export class RNEEngine {
     const R_prev_curr: Mat3[] = [];
     const R_curr_prev: Mat3[] = [];
     const p_link: Vec3[] = [];
+    const z_axis_in_curr: Vec3[] = [];
 
     for (let i = 0; i < n; i++) {
       const dh = dhParams[i];
@@ -580,6 +587,7 @@ export class RNEEngine {
       R_curr_prev.push(R_i_prev);
       R_prev_curr.push(transposeMat3(R_i_prev));
       p_link.push([a, d * sinAl, d * cosAl]);
+      z_axis_in_curr.push([0, sinAl, cosAl]);
     }
 
     const w: Vec3[] = [];
@@ -597,19 +605,22 @@ export class RNEEngine {
       const qdd = qddRad[i] || 0;
       const r_com = inertiaList[i].com;
 
-      const w_i = add3(multMatVec3(R_p_c, w_prev), scale3(z0, qd));
+      // w_i = R_{i-1}^i * (w_{i-1} + qd_i * z0)
+      const w_in_prev = add3(w_prev, scale3(z0, qd));
+      const w_i = multMatVec3(R_p_c, w_in_prev);
       w.push(w_i);
 
-      const wDot_i = add3(
-        add3(multMatVec3(R_p_c, wDot_prev), cross3(multMatVec3(R_p_c, w_prev), scale3(z0, qd))),
-        scale3(z0, qdd)
-      );
+      // wDot_i = R_{i-1}^i * (wDot_{i-1} + w_{i-1} x (qd_i * z0) + qdd_i * z0)
+      const gyroscopic = cross3(w_prev, scale3(z0, qd));
+      const wDot_in_prev = add3(add3(wDot_prev, gyroscopic), scale3(z0, qdd));
+      const wDot_i = multMatVec3(R_p_c, wDot_in_prev);
       wDot.push(wDot_i);
 
-      const pDDot_i = add3(
-        add3(multMatVec3(R_p_c, pDDot_prev), cross3(wDot_i, p_link[i])),
-        cross3(w_i, cross3(w_i, p_link[i]))
-      );
+      // pDDot_i = R_{i-1}^i * pDDot_{i-1} + wDot_i x p_link[i] + w_i x (w_i x p_link[i])
+      const pDDot_from_prev = multMatVec3(R_p_c, pDDot_prev);
+      const wDot_x_p = cross3(wDot_i, p_link[i]);
+      const w_x_w_x_p = cross3(w_i, cross3(w_i, p_link[i]));
+      const pDDot_i = add3(add3(pDDot_from_prev, wDot_x_p), w_x_w_x_p);
       pDDot.push(pDDot_i);
 
       const pDDotC_i = add3(
@@ -651,7 +662,8 @@ export class RNEEngine {
         cross3(p_next_in_curr, f_from_next)
       );
 
-      tau[i] = dot3(n_i, z0);
+      // Motor torque: project n_i onto axis z_{i-1} in frame i: [0, sin(alpha_i), cos(alpha_i)]
+      tau[i] = dot3(n_i, z_axis_in_curr[i]);
       f_next = f_i;
       n_next = n_i;
     }

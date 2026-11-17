@@ -275,7 +275,8 @@ export class MotorDriveEngine {
     const currentA = tauMotor / params.torqueConstant;
     const backEmf = params.backEmfConstant * omegaRotor;
     const voltageV = backEmf + params.armatureResistance * currentA;
-    const isVoltageSaturated = Math.abs(voltageV) > params.ratedVoltage;
+    const ratedV = (typeof params.ratedVoltage === 'number' && !isNaN(params.ratedVoltage) && params.ratedVoltage > 0) ? params.ratedVoltage : 48.0;
+    const isVoltageSaturated = Math.abs(voltageV) > ratedV;
 
     // Transmitted torque to joint link
     const tauShaft = tauMotor - params.rotorDamping * omegaRotor;
@@ -326,9 +327,10 @@ export class MotorDriveEngine {
     );
 
     // 3. Voltage demand: v = backEmf + R * iDesired
+    const ratedV = (typeof params.ratedVoltage === 'number' && !isNaN(params.ratedVoltage) && params.ratedVoltage > 0) ? params.ratedVoltage : 48.0;
     const vCmd = backEmf + params.armatureResistance * iDesired;
-    const isVoltageSaturated = Math.abs(vCmd) > params.ratedVoltage;
-    const vActual = Math.max(-params.ratedVoltage, Math.min(params.ratedVoltage, vCmd));
+    const isVoltageSaturated = Math.abs(vCmd) > ratedV;
+    const vActual = Math.max(-ratedV, Math.min(ratedV, vCmd));
 
     // 4. Closed-loop electrical tracking dynamics (inner current loop bandwidth ~ 1500 rad/s)
     const tauElec = Math.max(0.0005, params.armatureInductance / (params.armatureResistance + 10.0));
@@ -337,7 +339,7 @@ export class MotorDriveEngine {
     // Limit steady-state current under voltage saturation
     let iTarget = iDesired;
     if (isVoltageSaturated) {
-      const vAvailable = Math.max(0, params.ratedVoltage - Math.abs(backEmf));
+      const vAvailable = Math.max(0, ratedV - Math.abs(backEmf));
       const iMaxVoltage = vAvailable / Math.max(0.05, params.armatureResistance);
       iTarget = Math.sign(iDesired) * Math.min(Math.abs(iDesired), iMaxVoltage);
     }
@@ -400,9 +402,10 @@ export class MotorDriveEngine {
       Math.min(params.peakCurrent, tauMotorDesired / params.torqueConstant)
     );
 
+    const ratedV = (typeof params.ratedVoltage === 'number' && !isNaN(params.ratedVoltage) && params.ratedVoltage > 0) ? params.ratedVoltage : 48.0;
     const vCmd = backEmf + params.armatureResistance * iDesired;
-    const isVoltageSaturated = Math.abs(vCmd) > params.ratedVoltage;
-    const vActual = Math.max(-params.ratedVoltage, Math.min(params.ratedVoltage, vCmd));
+    const isVoltageSaturated = Math.abs(vCmd) > ratedV;
+    const vActual = Math.max(-ratedV, Math.min(ratedV, vCmd));
 
     // Closed-loop electrical tracking dynamics (bandwidth ~ 1500 rad/s)
     const tauElec = Math.max(0.0005, params.armatureInductance / (params.armatureResistance + 10.0));
@@ -410,7 +413,7 @@ export class MotorDriveEngine {
 
     let iTarget = iDesired;
     if (isVoltageSaturated) {
-      const vAvailable = Math.max(0, params.ratedVoltage - Math.abs(backEmf));
+      const vAvailable = Math.max(0, ratedV - Math.abs(backEmf));
       const iMaxVoltage = vAvailable / Math.max(0.05, params.armatureResistance);
       iTarget = Math.sign(iDesired) * Math.min(Math.abs(iDesired), iMaxVoltage);
     }
@@ -472,7 +475,8 @@ export class MotorDriveEngine {
   ): { nextState: MotorDynamicState; tauJointActual: number } {
     const p = params.polePairs || 6;
     const omegaElec = p * omegaRotor; // rad/s electrical speed
-    const Vdc = Math.max(10.0, params.ratedVoltage);
+    const ratedV = (typeof params.ratedVoltage === 'number' && !isNaN(params.ratedVoltage) && params.ratedVoltage > 0) ? params.ratedVoltage : 48.0;
+    const Vdc = Math.max(10.0, ratedV);
     const vMax = Vdc / Math.sqrt(3); // SVPWM linear modulation limit
 
     // In FOC, i_q produces electromagnetic torque, i_d is kept at 0 (or negative for flux weakening)
@@ -682,9 +686,10 @@ export class MotorDriveEngine {
     const kpCurrent = 16.0;
     const Rs = params.armatureResistance;
     const prevIsq = prev.currentA;
+    const ratedV = (typeof params.ratedVoltage === 'number' && !isNaN(params.ratedVoltage) && params.ratedVoltage > 0) ? params.ratedVoltage : 48.0;
     const vqCmd = Rs * isqDesired + kpCurrent * (isqDesired - prevIsq);
-    const isVoltageSaturated = Math.abs(vqCmd) > params.ratedVoltage;
-    const vqActual = Math.max(-params.ratedVoltage, Math.min(params.ratedVoltage, vqCmd));
+    const isVoltageSaturated = Math.abs(vqCmd) > ratedV;
+    const vqActual = Math.max(-ratedV, Math.min(ratedV, vqCmd));
 
     const diDt = (vqActual - Rs * prevIsq) / Math.max(1e-4, params.armatureInductance);
     let nextIsq = prevIsq + dt * diDt;
