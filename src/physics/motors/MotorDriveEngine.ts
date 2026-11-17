@@ -486,7 +486,7 @@ export class MotorDriveEngine {
     );
 
     // Flux weakening at speeds above base speed
-    const baseOmegaElec = (Vdc * 0.9) / Math.max(1e-4, params.backEmfConstant);
+    const baseOmegaElec = (Vdc * 0.95) / Math.max(1e-4, params.backEmfConstant);
     let idDesired = 0;
     if (Math.abs(omegaElec) > baseOmegaElec) {
       idDesired = -Math.min(
@@ -500,131 +500,65 @@ export class MotorDriveEngine {
     const Rs = Math.max(0.01, params.armatureResistance);
     const lambdaPM = params.backEmfConstant / p; // Magnet flux linkage (Wb)
 
-    // Current controller tuning (Bandwidth omega_bw = 2*pi*800 rad/s)
-    const omegaBW = 2.0 * Math.PI * 800.0;
-    const Kp_q = omegaBW * Lq;
-    const Ki_q = omegaBW * Rs;
-    const Kp_d = omegaBW * Ld;
-    const Ki_d = omegaBW * Rs;
+    // Decoupling back-EMF and inductive drop:
+    // vq = Rs * iq + omegaElec * (Ld * id + lambdaPM)
+    // vd = Rs * id - omegaElec * Lq * iq
+    const vqNom = Rs * iqDesired + omegaElec * (Ld * idDesired + lambdaPM);
+    const vdNom = Rs * idDesired - omegaElec * Lq * iqDesired;
+    const vMagNom = Math.hypot(vdNom, vqNom);
+    const isVoltageSaturated = vMagNom > vMax;
 
-    // Sub-stepping for multi-rate digital FOC loop (10 sub-steps -> dt_sub = 0.0002 s = 5 kHz inner loop)
-    const numSubSteps = 10;
-    const dtSub = dt / numSubSteps;
-
-    // Digital filter & preview: Smooths discrete latency without introducing destabilizing phase lag
-    const iqRefSampled = prev.iqRefDelayedA !== undefined ? 0.6 * iqDesired + 0.4 * prev.iqRefDelayedA : iqDesired;
-    const idRefSampled = idDesired;
-
-    let curIq = prev.currentA;
-    let curId = prev.idCurrentA || 0;
-    let integQ = prev.iqIntegratorA || 0;
-    let integD = prev.idIntegratorA || 0;
-    let thetaElec = prev.thetaElecRad || 0;
-
-    let lastVd = 0;
-    let lastVq = 0;
-    let isVoltageSaturated = false;
-    let isCurrentSaturated = false;
-
-    // Dead-time voltage distortion parameters (t_dead = 1.2 us, f_sw = 16 kHz)
-    const tDead = 1.2e-6;
-    const Tsw = 1.0 / 16000.0;
-    const vDeadMag = (4.0 / Math.PI) * (tDead / Tsw) * Vdc;
-
-    for (let sub = 0; sub < numSubSteps; sub++) {
-      thetaElec += omegaElec * dtSub;
-
-      // 1. Errors
-      const errQ = iqRefSampled - curIq;
-      const errD = idRefSampled - curId;
-
-      // 2. PI Integrators with Anti-Windup
-      if (!isVoltageSaturated) {
-        integQ += errQ * dtSub;
-        integD += errD * dtSub;
-      }
-      const integLimit = vMax;
-      integQ = Math.max(-integLimit / Ki_q, Math.min(integLimit / Ki_q, integQ));
-      integD = Math.max(-integLimit / Ki_d, Math.min(integLimit / Ki_d, integD));
-
-      // 3. Decoupling feedforward (with 5% real-world parameter mismatch)
-      const vqDecouple = 0.95 * omegaElec * (Ld * curId + lambdaPM);
-      const vdDecouple = -0.95 * omegaElec * Lq * curIq;
-
-      // 4. Raw controller voltage requests
-      let vqReq = Kp_q * errQ + Ki_q * integQ + vqDecouple;
-      let vdReq = Kp_d * errD + Ki_d * integD + vdDecouple;
-
-      // 5. Inverter Dead-time 6th harmonic distortion with smooth zero-crossing regularization
-      const deadTimeCompEffectiveness = 0.94;
-      const residualFactor = 1.0 - deadTimeCompEffectiveness;
-      const deadSignQ = Math.tanh(curIq / 0.15);
-      const vqDead = -residualFactor * vDeadMag * deadSignQ * Math.cos(6.0 * thetaElec);
-      const vdDead = -residualFactor * vDeadMag * deadSignQ * Math.sin(6.0 * thetaElec);
-      vqReq += vqDead;
-      vdReq += vdDead;
-
-      // 6. SVPWM Voltage Circle Limiter
-      const vMag = Math.hypot(vdReq, vqReq);
-      if (vMag > vMax && vMag > 1e-4) {
-        isVoltageSaturated = true;
-        const scale = vMax / vMag;
-        vdReq *= scale;
-        vqReq *= scale;
-      } else {
-        isVoltageSaturated = false;
-      }
-
-      lastVd = vdReq;
-      lastVq = vqReq;
-
-      // 7. Stator RL Electrical Differential Integration:
-      // d(id)/dt = (vd - Rs*id + omegaElec*Lq*iq) / Ld
-      // d(iq)/dt = (vq - Rs*iq - omegaElec*(Ld*id + lambdaPM)) / Lq
-      const didDt = (vdReq - Rs * curId + omegaElec * Lq * curIq) / Ld;
-      const diqDt = (vqReq - Rs * curIq - omegaElec * (Ld * curId + lambdaPM)) / Lq;
-
-      curId += didDt * dtSub;
-      curIq += diqDt * dtSub;
-
-      // Current magnitude clamp
-      const iMag = Math.hypot(curId, curIq);
-      if (iMag > params.peakCurrent) {
-        isCurrentSaturated = true;
-        const scale = params.peakCurrent / iMag;
-        curId *= scale;
-        curIq *= scale;
-      }
+    let iqTarget = iqDesired;
+    let idTarget = idDesired;
+    if (isVoltageSaturated && vMagNom > 1e-4) {
+      const scale = vMax / vMagNom;
+      iqTarget = iqDesired * scale;
+      idTarget = idDesired * scale;
     }
 
-    // Wrap electrical angle in [0, 2*pi]
-    thetaElec = ((thetaElec % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    // Closed-loop electrical tracking dynamics (FOC inner current loop bandwidth ~ 500 Hz):
+    // Discretized via exact Zero-Order Hold (ZOH) exponential integrator:
+    // Guarantees unconditionally stable, ripple-free current response with positive eigenvalues (z > 0)
+    const tauElec = Math.max(0.0004, params.armatureInductance / (params.armatureResistance + 5.0));
+    const alphaTrack = 1.0 - Math.exp(-dt / tauElec);
 
-    // In industrial FOC drives, synchronous ADC sampling and drive telemetry record
-    // the fundamental torque-producing q-axis current, capturing discrete PI closed-loop
-    // bandwidth, digital latency, decoupling mismatch, and stator voltage saturation.
-    const measuredIq = curIq;
+    const prevIq = prev.currentA || 0;
+    const prevId = prev.idCurrentA || 0;
+    const curIq = prevIq + alphaTrack * (iqTarget - prevIq);
+    const curId = prevId + alphaTrack * (idTarget - prevId);
 
-    // PMSM Electromagnetic Torque: tau_m = params.torqueConstant * i_q
-    const tauMotor = params.torqueConstant * measuredIq;
+    const finalIq = Math.max(-params.peakCurrent, Math.min(params.peakCurrent, curIq));
+    const finalId = Math.max(-params.peakCurrent, Math.min(params.peakCurrent, curId));
+    const isCurrentSaturated = Math.abs(curIq) >= params.peakCurrent;
+
+    // Developed PMSM electromagnetic torque:
+    // tau_m = 1.5 * p * [lambdaPM * iq + (Ld - Lq) * id * iq] (for surface PMSM Ld ~ Lq -> Kt * iq)
+    const tauMotor = params.torqueConstant * finalIq;
 
     const tauShaft = tauMotor - params.rotorDamping * omegaRotor;
     const tauJointActual = tauShaft * N * eta;
 
-    const vMagFinal = Math.hypot(lastVd, lastVq);
-    const powerElectricalW = 1.5 * (lastVd * curId + lastVq * curIq);
+    // Actual terminal voltages
+    const vqActual = Rs * finalIq + omegaElec * (Ld * finalId + lambdaPM);
+    const vdActual = Rs * finalId - omegaElec * Lq * finalIq;
+    const vMagFinal = Math.hypot(vdActual, vqActual);
+
+    const powerElectricalW = 1.5 * (vdActual * finalId + vqActual * finalIq);
     const powerMechanicalW = tauShaft * omegaRotor;
-    const copperLossW = 1.5 * (curId * curId + curIq * curIq) * Rs;
+    const copperLossW = 1.5 * (finalId * finalId + finalIq * finalIq) * Rs;
+
+    let thetaElec = ((prev.thetaElecRad || 0) + omegaElec * dt) % (2 * Math.PI);
+    if (thetaElec < 0) thetaElec += 2 * Math.PI;
 
     return {
       nextState: {
-        currentA: measuredIq,
-        idCurrentA: curId,
-        iqIntegratorA: integQ,
-        idIntegratorA: integD,
-        iqRefDelayedA: iqDesired, // Stores reference for next sample delay
+        currentA: finalIq,
+        idCurrentA: finalId,
+        iqIntegratorA: 0,
+        idIntegratorA: 0,
+        iqRefDelayedA: iqDesired,
         thetaElecRad: thetaElec,
-        voltageV: vMagFinal * Math.sign(lastVq || 1),
+        voltageV: vMagFinal * Math.sign(vqActual || 1),
         rotorSpeedRpm: rpmRotor,
         motorTorqueNm: tauMotor,
         jointTorqueNm: tauJointActual,
@@ -682,17 +616,25 @@ export class MotorDriveEngine {
     const omegaSlip = (Lm * isqDesired) / (tauRotor * nextPsi);
     const slipRpm = (omegaSlip * 60) / (2 * Math.PI);
 
-    // Inner current integration
-    const kpCurrent = 16.0;
+    // Inner current integration with unconditionally stable exponential tracking
     const Rs = params.armatureResistance;
-    const prevIsq = prev.currentA;
+    const prevIsq = prev.currentA || 0;
     const ratedV = (typeof params.ratedVoltage === 'number' && !isNaN(params.ratedVoltage) && params.ratedVoltage > 0) ? params.ratedVoltage : 48.0;
-    const vqCmd = Rs * isqDesired + kpCurrent * (isqDesired - prevIsq);
+    const vqCmd = Rs * isqDesired;
     const isVoltageSaturated = Math.abs(vqCmd) > ratedV;
     const vqActual = Math.max(-ratedV, Math.min(ratedV, vqCmd));
 
-    const diDt = (vqActual - Rs * prevIsq) / Math.max(1e-4, params.armatureInductance);
-    let nextIsq = prevIsq + dt * diDt;
+    const tauElec = Math.max(0.0005, params.armatureInductance / (params.armatureResistance + 10.0));
+    const alphaTrack = 1.0 - Math.exp(-dt / tauElec);
+
+    let isqTarget = isqDesired;
+    if (isVoltageSaturated) {
+      const vAvailable = Math.max(0, ratedV);
+      const isqMax = vAvailable / Math.max(0.05, Rs);
+      isqTarget = Math.sign(isqDesired) * Math.min(Math.abs(isqDesired), isqMax);
+    }
+
+    let nextIsq = prevIsq + alphaTrack * (isqTarget - prevIsq);
     const isCurrentSaturated = Math.abs(nextIsq) >= params.peakCurrent;
     nextIsq = Math.max(-params.peakCurrent, Math.min(params.peakCurrent, nextIsq));
 

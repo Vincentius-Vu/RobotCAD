@@ -705,9 +705,9 @@ export class RNEEngine {
 
     for (let i = 0; i < n; i++) {
       const m_i = inertiaList[i].mass;
-      const r_com_local = new THREE.Vector3(...inertiaList[i].com);
+      const r_com_local_mm = new THREE.Vector3(...inertiaList[i].com).multiplyScalar(1000);
       const T_i = transforms[i + 1];
-      const p_Ci = r_com_local.clone().applyMatrix4(T_i).multiplyScalar(0.001);
+      const p_Ci = r_com_local_mm.applyMatrix4(T_i).multiplyScalar(0.001);
 
       const R_i = new THREE.Matrix3().setFromMatrix4(T_i);
       const I_local = inertiaList[i].inertia;
