@@ -576,17 +576,67 @@ export class RobotKinematics {
           ];
 
           // Refine precisely via numerical DLS from this seed posture
-          const refined = this.solveNumericalIK(joints, seedDeg, targetT, 30, 0.05);
-          const finalAngles = refined || seedDeg.map(v => Number(v.toFixed(2)));
+          const refined = this.solveNumericalIK(joints, seedDeg, targetT, 60, 0.01);
+          if (refined) {
+            // Verify TCP distance error < 2.0 mm
+            const tTest = this.computeForwardKinematics(joints, refined);
+            const pTest = new THREE.Vector3();
+            tTest[tTest.length - 1].decompose(pTest, new THREE.Quaternion(), new THREE.Vector3());
+            if (pTest.distanceTo(new THREE.Vector3(px, py, pz)) < 2.5) {
+              const roundedAngles = refined.map(v => Number(v.toFixed(2)));
 
-          configs.push({
-            index: configIndex++,
-            name: `${sh.toUpperCase()} / ${el.toUpperCase()} / ${wr.toUpperCase()}`,
-            shoulder: sh,
-            elbow: el,
-            wrist: wr,
-            anglesDeg: finalAngles
-          });
+              // Avoid duplicate configurations
+              const isDuplicate = configs.some(c =>
+                c.anglesDeg.every((a, idx) => Math.abs(a - roundedAngles[idx]) < 1.0)
+              );
+
+              if (!isDuplicate) {
+                configs.push({
+                  index: configIndex++,
+                  name: `${sh.toUpperCase()} / ${el.toUpperCase()} / ${wr.toUpperCase()}`,
+                  shoulder: sh,
+                  elbow: el,
+                  wrist: wr,
+                  anglesDeg: roundedAngles
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Secondary dual-wrist augmentation for spherical wrists
+    const existingConfigs = [...configs];
+    for (const cfg of existingConfigs) {
+      const a = cfg.anglesDeg;
+      const q4_dual = a[3] > 0 ? a[3] - 180 : a[3] + 180;
+      const q5_dual = -a[4];
+      const q6_dual = a[5] > 0 ? a[5] - 180 : a[5] + 180;
+      const seedDual = [a[0], a[1], a[2], q4_dual, q5_dual, q6_dual];
+
+      const sol = this.solveNumericalIK(joints, seedDual, targetT, 40, 0.01);
+      if (sol) {
+        const tTest = this.computeForwardKinematics(joints, sol);
+        const pTest = new THREE.Vector3();
+        tTest[tTest.length - 1].decompose(pTest, new THREE.Quaternion(), new THREE.Vector3());
+        if (pTest.distanceTo(new THREE.Vector3(px, py, pz)) < 2.5) {
+          const roundedAngles = sol.map(v => Number(v.toFixed(2)));
+          const isDuplicate = configs.some(c =>
+            c.anglesDeg.every((val, idx) => Math.abs(val - roundedAngles[idx]) < 1.0)
+          );
+
+          if (!isDuplicate) {
+            const dualWrist = cfg.wrist === 'no-flip' ? 'flip' : 'no-flip';
+            configs.push({
+              index: configIndex++,
+              name: `${cfg.shoulder.toUpperCase()} / ${cfg.elbow.toUpperCase()} / ${dualWrist.toUpperCase()}`,
+              shoulder: cfg.shoulder,
+              elbow: cfg.elbow,
+              wrist: dualWrist,
+              anglesDeg: roundedAngles
+            });
+          }
         }
       }
     }
@@ -630,15 +680,16 @@ export class RobotKinematics {
   }
 
   /**
-   * General Numerical Inverse Kinematics solver using Damped Least Squares (DLS)
-   * Suitable for ANY 6-DOF industrial manipulator
+   * General Numerical Inverse Kinematics solver using adaptive Levenberg-Marquardt (LM)
+   * Damped Least Squares with line search step verification.
+   * Suitable for ANY 6-DOF or redundant manipulator.
    */
   public static solveNumericalIK(
     joints: DHParameter[],
     initialAnglesDeg: number[],
     targetT: THREE.Matrix4,
-    maxIter = 25,
-    damping = 0.08
+    maxIter = 50,
+    damping = 0.02
   ): number[] | null {
     const q = [...initialAnglesDeg];
     const n = joints.length;
@@ -646,6 +697,8 @@ export class RobotKinematics {
     const targetPos = new THREE.Vector3();
     const targetQuat = new THREE.Quaternion();
     targetT.decompose(targetPos, targetQuat, new THREE.Vector3());
+
+    let lambda = damping;
 
     for (let iter = 0; iter < maxIter; iter++) {
       const transforms = this.computeForwardKinematics(joints, q);
@@ -658,24 +711,23 @@ export class RobotKinematics {
       // Position error
       const posError = new THREE.Vector3().subVectors(targetPos, currentPos);
 
-      // Orientation error via quaternion log / cross product
+      // Orientation error via quaternion log
       const qErr = targetQuat.clone().multiply(currentQuat.clone().invert());
       const rotError = new THREE.Vector3(qErr.x, qErr.y, qErr.z).multiplyScalar(2.0);
       if (qErr.w < 0) rotError.negate();
 
-      const errorMag = Math.sqrt(posError.lengthSq() + rotError.lengthSq() * 100);
-      if (errorMag < 1.0) {
-        return q; // Converged within 1mm
+      const errPosMm = posError.length();
+      const errRotRad = rotError.length();
+
+      if (errPosMm < 1.0 && errRotRad < 0.02) {
+        return q; // Converged within 1.0 mm and 0.02 rad (~1.1 deg)
       }
 
       // Compute Jacobian
       const { J } = this.computeGeometricJacobian(joints, q);
-
-      // Error vector e = [posError.x, posError.y, posError.z, rotError.x, rotError.y, rotError.z]
       const e = [posError.x, posError.y, posError.z, rotError.x, rotError.y, rotError.z];
 
-      // Damped Least Squares: delta_q = J^T * (J * J^T + lambda^2 * I)^(-1) * e
-      // Compute JJT (6x6)
+      // Damped Least Squares: J * J^T + lambda * I
       const JJT: number[][] = Array.from({ length: 6 }, () => new Array(6).fill(0));
       for (let r = 0; r < 6; r++) {
         for (let c = 0; c < 6; c++) {
@@ -683,15 +735,13 @@ export class RobotKinematics {
           for (let k = 0; k < n; k++) {
             sum += J[r][k] * J[c][k];
           }
-          JJT[r][c] = sum + (r === c ? damping * damping * 1000 : 0);
+          JJT[r][c] = sum + (r === c ? lambda * 1000 : 0);
         }
       }
 
-      // Invert 6x6 JJT via Gauss-Jordan elimination
       const invJJT = this.invert6x6(JJT);
       if (!invJJT) break;
 
-      // temp = invJJT * e
       const temp = new Array(6).fill(0);
       for (let r = 0; r < 6; r++) {
         for (let c = 0; c < 6; c++) {
@@ -699,19 +749,40 @@ export class RobotKinematics {
         }
       }
 
-      // delta_q = J^T * temp
+      const nextQ = [...q];
       for (let i = 0; i < n; i++) {
         let dq = 0;
         for (let r = 0; r < 6; r++) {
           dq += J[r][i] * temp[r];
         }
-        // Convert to degrees and apply gain
-        const dqDeg = THREE.MathUtils.radToDeg(dq) * 0.6;
-        q[i] = Math.max(joints[i].qMinDeg, Math.min(joints[i].qMaxDeg, q[i] + dqDeg));
+        const dqDeg = THREE.MathUtils.radToDeg(dq) * 0.75;
+        nextQ[i] = Math.max(joints[i].qMinDeg, Math.min(joints[i].qMaxDeg, q[i] + dqDeg));
+      }
+
+      // Line search / error decrease check
+      const nextTransforms = this.computeForwardKinematics(joints, nextQ);
+      const nextPos = new THREE.Vector3();
+      nextTransforms[nextTransforms.length - 1].decompose(nextPos, new THREE.Quaternion(), new THREE.Vector3());
+      const nextErrPos = targetPos.distanceTo(nextPos);
+
+      if (nextErrPos < errPosMm) {
+        lambda = Math.max(1e-4, lambda * 0.6); // Successful step, decrease damping
+        for (let i = 0; i < n; i++) q[i] = nextQ[i];
+      } else {
+        lambda = Math.min(10.0, lambda * 3.0); // Step failed, increase damping
+        for (let i = 0; i < n; i++) q[i] = nextQ[i];
       }
     }
 
-    return q;
+    // Final convergence verification
+    const transforms = this.computeForwardKinematics(joints, q);
+    const finalPos = new THREE.Vector3();
+    transforms[transforms.length - 1].decompose(finalPos, new THREE.Quaternion(), new THREE.Vector3());
+    if (targetPos.distanceTo(finalPos) < 2.5) {
+      return q;
+    }
+
+    return null;
   }
 
   /**

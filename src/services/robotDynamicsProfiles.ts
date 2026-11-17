@@ -770,14 +770,16 @@ export class RobotDynamicsProfileManager {
    */
   public static getProfileForRobot(robotId: string, model: RobotModel): RobotDynamicsProfile {
     try {
-      const stored = localStorage.getItem(`${STORAGE_PREFIX}${robotId}`);
-      if (stored) {
-        const parsed: RobotDynamicsProfile = JSON.parse(stored);
-        if (parsed.joints && parsed.joints.length === model.dof) {
-          return {
-            ...parsed,
-            isCustomTuned: true,
-          };
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        const stored = localStorage.getItem(`${STORAGE_PREFIX}${robotId}`);
+        if (stored) {
+          const parsed: RobotDynamicsProfile = JSON.parse(stored);
+          if (parsed.joints && parsed.joints.length === model.dof) {
+            return {
+              ...parsed,
+              isCustomTuned: true,
+            };
+          }
         }
       }
     } catch (e) {

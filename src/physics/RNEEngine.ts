@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { DHParameter } from '../types/robot';
 import { InertialParameters } from '../types/dynamics';
+import { RobotKinematics } from '../kinematics/RobotKinematics';
 
 /**
  * Recursive Newton-Euler (RNE) Dynamics Engine
@@ -309,7 +310,8 @@ export class RNEEngine {
     robotId: string,
     dof: number,
     totalWeightKg: number,
-    reachMm: number
+    reachMm: number,
+    dhParams?: DHParameter[]
   ): InertialParameters[] {
     const idLower = robotId.toLowerCase();
     if (idLower.includes('puma560') && dof === 6) {
@@ -332,16 +334,25 @@ export class RNEEngine {
 
     for (let i = 0; i < dof; i++) {
       const linkMass = (totalWeightKg * (baseFractions[i] || 0.05));
-      const r = (reachMm / 1000) * 0.15;
-      const I_val = 0.5 * linkMass * r * r * scaleInertia;
+      const dh = dhParams && dhParams[i];
+      const a_m = dh ? Math.abs(dh.a) / 1000 : 0;
+      const d_m = dh ? Math.abs(dh.d) / 1000 : 0;
+      const linkLen_m = Math.sqrt(a_m * a_m + d_m * d_m);
+      const effectiveLen = linkLen_m > 0.05 ? linkLen_m : (reachMm / (dof * 1000));
+      const r = effectiveLen * 0.15;
+      const I_transverse = Math.max(1e-4, (1 / 12) * linkMass * (3 * r * r + effectiveLen * effectiveLen) * scaleInertia);
+      const I_axial = Math.max(1e-4, 0.5 * linkMass * r * r * scaleInertia);
+
+      const com_x = dh ? (dh.a / 2000) : 0;
+      const com_z = dh ? (dh.d / 2000) : (reachMm / (dof * 2000));
 
       list.push({
         mass: linkMass,
-        com: [0, 0, (reachMm / (dof * 2000))],
+        com: [com_x, 0, com_z],
         inertia: [
-          [I_val, 0, 0],
-          [0, I_val, 0],
-          [0, 0, I_val * 0.6],
+          [I_transverse, 0, 0],
+          [0, I_transverse, 0],
+          [0, 0, I_axial],
         ],
         viscousFriction: 0.001 * scaleMass,
         coulombFriction: 0.1 * scaleMass,
@@ -650,6 +661,10 @@ export class RNEEngine {
 
   /**
    * Computes the complete Joint Space Inertia Matrix M(q) [n x n]
+   * Formulated via Link-Jacobian Kinetic Energy Formulation:
+   * M(q) = sum_{i=0}^{n-1} [ J_{v,Ci}^T * m_i * J_{v,Ci} + J_{w,i}^T * (R_0^i * I_i * (R_0^i)^T) * J_{w,i} ] + diag(J_rotor)
+   * This analytical formulation is strictly Symmetric Positive-Definite (SPD) for any
+   * kinematic chain and guarantees non-singular, robust Cholesky decomposition across all robots.
    */
   public static computeMassMatrix(
     dhParams: DHParameter[],
@@ -658,24 +673,64 @@ export class RNEEngine {
     reflectedRotorInertias?: number[]
   ): number[][] {
     const n = Math.min(dhParams.length, inertiaList.length);
-    const M: number[][] = Array.from({ length: n }, () => new Array(n).fill(0));
-    const zeroArr = new Array(n).fill(0);
+    const qDeg = qRad.map((r) => (r * 180) / Math.PI);
+    const transforms = RobotKinematics.computeForwardKinematics(dhParams, qDeg);
 
-    for (let j = 0; j < n; j++) {
-      const ej = new Array(n).fill(0);
-      ej[j] = 1.0; // Unit angular acceleration on joint j
-      const col = this.computeRawTorque(dhParams, inertiaList, qRad, zeroArr, ej, 0);
-      for (let i = 0; i < n; i++) {
-        M[i][j] = col[i];
-      }
+    const origins: THREE.Vector3[] = [];
+    const zAxes: THREE.Vector3[] = [];
+
+    for (let i = 0; i <= n; i++) {
+      const T = transforms[i];
+      const pos = new THREE.Vector3();
+      const rot = new THREE.Quaternion();
+      T.decompose(pos, rot, new THREE.Vector3());
+      origins.push(pos.multiplyScalar(0.001)); // mm to meters
+      const te = T.elements;
+      zAxes.push(new THREE.Vector3(te[8], te[9], te[10]).normalize());
     }
 
-    // Enforce exact symmetry M = 0.5 * (M + M^T)
+    const M: number[][] = Array.from({ length: n }, () => new Array(n).fill(0));
+
     for (let i = 0; i < n; i++) {
-      for (let j = i + 1; j < n; j++) {
-        const avg = 0.5 * (M[i][j] + M[j][i]);
-        M[i][j] = avg;
-        M[j][i] = avg;
+      const m_i = inertiaList[i].mass;
+      const r_com_local = new THREE.Vector3(...inertiaList[i].com);
+      const T_i = transforms[i + 1];
+      const p_Ci = r_com_local.clone().applyMatrix4(T_i).multiplyScalar(0.001);
+
+      const R_i = new THREE.Matrix3().setFromMatrix4(T_i);
+      const I_local = inertiaList[i].inertia;
+      const I_local_mat = new THREE.Matrix3().set(
+        I_local[0][0], I_local[0][1], I_local[0][2],
+        I_local[1][0], I_local[1][1], I_local[1][2],
+        I_local[2][0], I_local[2][1], I_local[2][2]
+      );
+      const R_i_T = R_i.clone().transpose();
+      const I_base = I_local_mat.clone().multiply(R_i_T);
+      const I_base_full = R_i.clone().multiply(I_base);
+
+      const J_v: THREE.Vector3[] = [];
+      const J_w: THREE.Vector3[] = [];
+
+      for (let j = 0; j < n; j++) {
+        if (j <= i) {
+          const z_prev = zAxes[j];
+          const p_prev = origins[j];
+          const arm = new THREE.Vector3().subVectors(p_Ci, p_prev);
+          J_v.push(new THREE.Vector3().crossVectors(z_prev, arm));
+          J_w.push(z_prev.clone());
+        } else {
+          J_v.push(new THREE.Vector3(0, 0, 0));
+          J_w.push(new THREE.Vector3(0, 0, 0));
+        }
+      }
+
+      for (let j1 = 0; j1 < n; j1++) {
+        for (let j2 = 0; j2 < n; j2++) {
+          const vTerm = m_i * J_v[j1].dot(J_v[j2]);
+          const Iw = J_w[j2].clone().applyMatrix3(I_base_full);
+          const wTerm = J_w[j1].dot(Iw);
+          M[j1][j2] += vTerm + wTerm;
+        }
       }
     }
 

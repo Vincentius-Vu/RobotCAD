@@ -328,7 +328,8 @@ function startDynamicsLoop(get: any, set: any) {
           robotModel.id,
           robotModel.dof,
           robotModel.totalWeightKg,
-          robotModel.reachMm
+          robotModel.reachMm,
+          robotModel.joints
         );
 
   // Initialize motor states for each DOF
@@ -760,7 +761,13 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
       // Calculate initial FK
       const transforms = RobotKinematics.computeForwardKinematics(model.joints, defaultPosture);
       const initialPose = RobotKinematics.extractCartesianPose(transforms[transforms.length - 1]);
-      const rawInertias = RNEEngine.getInertialParameters(model.id, model.dof, model.totalWeightKg, model.reachMm);
+      const rawInertias = RNEEngine.getInertialParameters(
+        model.id,
+        model.dof,
+        model.totalWeightKg,
+        model.reachMm,
+        model.joints
+      );
 
       // Load robot-specific or customized motor/control profile (auto-loaded from localStorage or pre-tuned factory database)
       const profile = RobotDynamicsProfileManager.getProfileForRobot(model.id, model);
@@ -1507,7 +1514,8 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
             robotModel.id,
             robotModel.dof,
             robotModel.totalWeightKg,
-            robotModel.reachMm
+            robotModel.reachMm,
+            robotModel.joints
           );
 
     const torques = activeTrajectory.samples.map((s) => {
