@@ -1,6 +1,7 @@
 import { CartesianPose } from './robot';
 
 export type TrajectoryInterpolationType =
+  | 'double-tanh'
   | 'cubic'
   | 'quintic'
   | 'lspb'

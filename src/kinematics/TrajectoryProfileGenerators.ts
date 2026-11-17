@@ -11,8 +11,9 @@
  */
 
 import { SCurveProfileGenerator } from './SCurveProfileGenerator';
+import { DoubleTanhProfileGenerator } from './DoubleTanhProfileGenerator';
 
-export type TrajectoryAlgorithm = 'kds_scurve' | 'quintic' | 'cubic' | 'trapezoidal';
+export type TrajectoryAlgorithm = 'kds_scurve' | 'quintic' | 'cubic' | 'trapezoidal' | 'double_tanh';
 
 export interface MotionProfileState {
   s: number;  // Displacement (m or rad)
@@ -311,6 +312,41 @@ export class TrajectoryProfileGenerators {
   }
 
   /**
+   * 5. Proposed Infinitely Differentiable Double-Tanh Profile (UDT)
+   * Smooth C^inf profile with intrinsic saturation and zero residual vibration.
+   */
+  public static createDoubleTanhProfile(
+    dist: number,
+    V_max: number,
+    A_max: number,
+    J_max: number,
+    sigma?: number
+  ): MotionProfile {
+    const p = DoubleTanhProfileGenerator.computeProfileParams(dist, V_max, A_max, J_max, sigma);
+    const s_sgn = dist >= 0 ? 1 : -1;
+
+    const evaluate = (t: number): MotionProfileState => {
+      const state = DoubleTanhProfileGenerator.evaluate(t, p);
+      return {
+        s: s_sgn * state.s,
+        v: s_sgn * state.v,
+        a: s_sgn * state.a,
+        j: s_sgn * state.j,
+      };
+    };
+
+    return {
+      algorithm: 'double_tanh',
+      T_total: p.tTotal,
+      s_sgn,
+      peakVelocity: p.vCruise,
+      peakAcceleration: p.peakAcceleration,
+      peakJerk: p.peakJerk,
+      evaluate,
+    };
+  }
+
+  /**
    * Universal Factory: Creates specified motion profile by algorithm name
    */
   public static createProfile(
@@ -328,6 +364,8 @@ export class TrajectoryProfileGenerators {
         return this.createCubicProfile(dist, V_max, A_max);
       case 'quintic':
         return this.createQuinticProfile(dist, V_max, A_max, J_max);
+      case 'double_tanh':
+        return this.createDoubleTanhProfile(dist, V_max, A_max, J_max);
       case 'kds_scurve':
       default:
         return this.createSCurveProfile(dist, V_max, A_max, J_max, scalingLambda);

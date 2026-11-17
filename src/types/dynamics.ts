@@ -19,6 +19,8 @@ export type ControllerType =
   | 'computed-torque'
   | 'cartesian-impedance'
   | 'sliding-mode'
+  | 'linear-adrc'
+  | 'double-tanh-ctc'
   | (string & {});
 
 export type SMCSwitchingFunction = 'sign' | 'boundary-layer' | 'tanh' | 'super-twisting';

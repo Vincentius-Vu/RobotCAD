@@ -476,6 +476,67 @@ export const LADRCController: IRobotController = {
   },
 };
 
+/**
+ * 6. Double-Tanh Trajectory Tracking via Computed Torque Control (CTC)
+ * Infinitely differentiable C^inf smooth trajectory tracking with Dirac snap elimination
+ */
+export const DoubleTanhCTCController: IRobotController = {
+  id: 'double-tanh-ctc',
+  name: 'Double-Tanh Trajectory Tracking (Double-Tanh CTC)',
+  category: 'optimal',
+  description: 'τ = M(q)(q̈_d + Kp·e + Kd·ė) + C(q,q̇)q̇ + g(q) (Tối ưu hóa bám quỹ đạo C^∞ Double-Tanh, triệt tiêu Dirac snap)',
+  compute: (ctx: ControllerContext): ControllerOutput => {
+    const { dhParams, inertiaList, qRad, qdRad, qDesiredRad, qdDesiredRad, qddDesiredRad, gains, gravityAcc = 9.81, externalTorqueDisturbance = [] } = ctx;
+    const n = qRad.length;
+    const errorRad = new Array(n);
+    const errorDotRad = new Array(n);
+
+    for (let i = 0; i < n; i++) {
+      errorRad[i] = (qDesiredRad[i] || 0) - (qRad[i] || 0);
+      errorDotRad[i] = (qdDesiredRad[i] || 0) - (qdRad[i] || 0);
+    }
+
+    const zeroArr = new Array(n).fill(0);
+    const { tau: tauGrav } = RNEEngine.computeInverseDynamics(dhParams, inertiaList, qRad, zeroArr, zeroArr, gravityAcc);
+    const coriolisRes = RNEEngine.computeInverseDynamics(dhParams, inertiaList, qRad, qdRad, zeroArr, 0);
+    const tauCoriolis = coriolisRes.tauCoriolis;
+    const M = RNEEngine.computeMassMatrix(dhParams, inertiaList, qRad, ctx.reflectedRotorInertias);
+
+    const v = new Array(n);
+    for (let i = 0; i < n; i++) {
+      const kp = gains.kp[i] || 180;
+      const kd = 2.0 * Math.sqrt(kp) * ((gains.kd[i] || 25) / 20); // Critical damping zeta = 1
+      v[i] = (qddDesiredRad[i] || 0) + kp * errorRad[i] + kd * errorDotRad[i];
+    }
+
+    const tauInertia = new Array(n).fill(0);
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        tauInertia[i] += M[i][j] * v[j];
+      }
+    }
+
+    const tau = new Array(n);
+    for (let i = 0; i < n; i++) {
+      const raw = tauInertia[i] + tauCoriolis[i] + tauGrav[i] + (externalTorqueDisturbance[i] || 0);
+      const maxT = inertiaList[i]?.maxTorque || 150;
+      tau[i] = Math.max(-maxT, Math.min(maxT, raw));
+    }
+
+    return {
+      tau,
+      tauGravity: tauGrav,
+      tauInertia,
+      tauCoriolis,
+      errorRad,
+      errorDotRad,
+      diagnostics: {
+        trackingNorm: Math.hypot(...errorRad),
+      },
+    };
+  },
+};
+
 export interface CustomControllerDefinition {
   id: string;
   name: string;
@@ -739,6 +800,7 @@ export class ControllerStrategyRegistry {
     ['cartesian-impedance', CartesianImpedanceController],
     ['sliding-mode', SlidingModeController],
     ['linear-adrc', LADRCController],
+    ['double-tanh-ctc', DoubleTanhCTCController],
   ]);
 
   private static isInitialized = false;

@@ -49,6 +49,7 @@ export const TrajectoryTimelineBar: React.FC = () => {
   };
 
   const interpolationOptions: { id: TrajectoryInterpolationType; label: string }[] = [
+    { id: 'double-tanh', label: '★ Double-Tanh (C^∞)' },
     { id: 'quintic', label: 'Quintic (Smooth Jerk)' },
     { id: 's-curve', label: '7-Segment S-Curve' },
     { id: 'cubic', label: 'Cubic Spline' },

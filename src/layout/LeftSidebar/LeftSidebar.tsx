@@ -482,6 +482,7 @@ export const LeftSidebar: React.FC = () => {
                 onChange={(e) => setInterpolationType(e.target.value as TrajectoryInterpolationType)}
                 className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-purple-500 font-mono"
               >
+                <option value="double-tanh">★ Proposed Double-Tanh (C^∞ Continuous)</option>
                 <option value="quintic">Quintic Spline (Zero Jerk)</option>
                 <option value="s-curve">7-Segment S-Curve (Jerk-Bounded)</option>
                 <option value="cubic">Cubic Polynomial</option>

@@ -130,6 +130,11 @@ export class TrajectoryPlanner {
             q_t[j] = q;
             qd_t[j] = qd;
             qdd_t[j] = qdd;
+          } else if (type === 'double-tanh') {
+            const { q, qd, qdd } = this.evalDoubleTanh(q0[j], q1[j], t, T);
+            q_t[j] = q;
+            qd_t[j] = qd;
+            qdd_t[j] = qdd;
           } else {
             // Cubic default
             const { q, qd, qdd } = this.evalCubic(q0[j], q1[j], v0[j], v1[j], t, T);
@@ -519,6 +524,52 @@ export class TrajectoryPlanner {
       qd: v,
       qdd: a,
     };
+  }
+
+  /**
+   * Evaluates Proposed Unified Double-Tanh (UDT) Profile
+   * Infinitely differentiable C^inf smooth trajectory with intrinsic bounds and zero shock.
+   */
+  private static evalDoubleTanh(q0: number, q1: number, t: number, T: number) {
+    const dq = q1 - q0;
+    if (Math.abs(dq) < 1e-9 || T <= 1e-6) {
+      return { q: q0, qd: 0, qdd: 0 };
+    }
+    const tClamped = Math.max(0, Math.min(t, T));
+    const sig = 0.055 * T;
+    const t1 = 0.25 * T;
+    const t2 = T - t1;
+
+    const logcosh = (x: number): number => {
+      const ax = Math.abs(x);
+      return ax > 20.0 ? ax - Math.LN2 : ax - Math.LN2 + Math.log1p(Math.exp(-2.0 * ax));
+    };
+
+    const u1_0 = -t1 / sig;
+    const u2_0 = -t2 / sig;
+    const v0_raw = 0.5 * (Math.tanh(u1_0) - Math.tanh(u2_0));
+    const s0_raw = 0.5 * sig * (logcosh(u1_0) - logcosh(u2_0));
+    const a0_raw = (0.5 / sig) * ((1.0 - Math.pow(Math.tanh(u1_0), 2)) - (1.0 - Math.pow(Math.tanh(u2_0), 2)));
+
+    const u1_T = (T - t1) / sig;
+    const u2_T = (T - t2) / sig;
+    const sT_raw = 0.5 * sig * (logcosh(u1_T) - logcosh(u2_T));
+
+    const area_unit = (sT_raw - s0_raw) - v0_raw * T;
+    const scale = dq / area_unit;
+
+    const u1 = (tClamped - t1) / sig;
+    const u2 = (tClamped - t2) / sig;
+    const t_u1 = Math.tanh(u1);
+    const t_u2 = Math.tanh(u2);
+    const s2_u1 = 1.0 - t_u1 * t_u1;
+    const s2_u2 = 1.0 - t_u2 * t_u2;
+
+    const v = scale * (0.5 * (t_u1 - t_u2) - v0_raw);
+    const a = scale * ((0.5 / sig) * (s2_u1 - s2_u2) - a0_raw * (1.0 - 2.0 * tClamped / T));
+    const s = q0 + scale * (0.5 * sig * (logcosh(u1) - logcosh(u2)) - s0_raw - v0_raw * tClamped);
+
+    return { q: s, qd: v, qdd: a };
   }
 
   /**
