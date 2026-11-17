@@ -10,6 +10,7 @@ import {
   X,
   FileImage,
   Check,
+  Monitor,
 } from 'lucide-react';
 
 interface EnvironmentCameraPanelProps {
@@ -314,44 +315,60 @@ export const EnvironmentCameraPanel: React.FC<EnvironmentCameraPanelProps> = ({ 
 
         {/* 4. One-Click Textbook Snapshot / Export */}
         <div className="space-y-2">
-          <label className="text-[11px] font-mono uppercase text-slate-400 tracking-wider flex items-center space-x-1.5">
-            <Download className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{isVi ? 'Chụp & Xuất ảnh Sách / Bài giảng (High-Res 2X)' : 'High-Res 2X Snapshot for Book / Paper'}</span>
+          <label className="text-[11px] font-mono uppercase text-slate-400 tracking-wider flex items-center justify-between">
+            <span className="flex items-center space-x-1.5">
+              <Download className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{isVi ? 'Chụp & Xuất ảnh (High-Res Snapshot)' : 'High-Res 2X Snapshot'}</span>
+            </span>
           </label>
 
+          {/* Workspace No UI Options */}
           <div className="grid grid-cols-2 gap-2">
             <button
-              onClick={() => triggerCapture('white')}
+              onClick={() => triggerCapture({ format: 'white', scope: 'workspace' })}
               className="flex items-center space-x-2 px-3 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 shadow text-xs font-semibold transition text-left"
-              title={isVi ? "Xuất ảnh nền trắng tinh khiết độ phân giải cao phục vụ chèn vào tài liệu LaTeX/Word" : "Export high-resolution pure white background for LaTeX / Word papers"}
+              title={isVi ? "Xuất ảnh 3D nền trắng tinh khiết (No UI) phục vụ chèn vào tài liệu LaTeX/Word" : "Export high-res pure white 3D workspace (No UI) for LaTeX / Word"}
             >
               <FileImage className="w-4 h-4 text-sky-600 flex-shrink-0" />
               <div>
-                <span className="block leading-tight">{isVi ? "Nền trắng" : "Paper White"}</span>
+                <span className="block leading-tight">{isVi ? "Nền trắng (No UI)" : "Paper White"}</span>
                 <span className="text-[10px] text-slate-500 font-normal">{isVi ? "Cho Sách / LaTeX" : "For Book / LaTeX"}</span>
               </div>
             </button>
 
             <button
-              onClick={() => triggerCapture('transparent')}
+              onClick={() => triggerCapture({ format: 'transparent', scope: 'workspace' })}
               className="flex items-center space-x-2 px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 shadow text-xs font-semibold transition text-left"
-              title={isVi ? "Xuất ảnh PNG trong suốt (Transparent Alpha), không nền" : "Export transparent PNG without background"}
+              title={isVi ? "Xuất ảnh PNG trong suốt (No UI), không nền" : "Export transparent PNG without background (No UI)"}
             >
               <Download className="w-4 h-4 text-emerald-400 flex-shrink-0" />
               <div>
                 <span className="block leading-tight">{isVi ? "Nền trong suốt" : "Transparent"}</span>
-                <span className="text-[10px] text-slate-400 font-normal">Alpha PNG</span>
+                <span className="text-[10px] text-slate-400 font-normal">{isVi ? "Không nền (No UI)" : "Alpha PNG (No UI)"}</span>
               </div>
             </button>
           </div>
 
-          <button
-            onClick={() => triggerCapture('current')}
-            className="w-full py-2 px-3 rounded-lg bg-slate-800/80 hover:bg-slate-800 text-slate-300 border border-slate-700 text-xs font-medium transition flex items-center justify-center space-x-1.5"
-          >
-            <Camera className="w-3.5 h-3.5" />
-            <span>{isVi ? 'Chụp nguyên trạng góc nhìn hiện tại' : 'Snapshot current viewport angle'}</span>
-          </button>
+          {/* Quick buttons: Workspace current vs Fullscreen with UI */}
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <button
+              onClick={() => triggerCapture({ format: 'current', scope: 'workspace' })}
+              className="py-2 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700 text-[11px] font-medium transition flex items-center justify-center space-x-1.5"
+              title={isVi ? "Chỉ chụp góc nhìn 3D hiện tại (Không kèm giao diện)" : "Capture current 3D viewport angle only (No UI)"}
+            >
+              <Camera className="w-3.5 h-3.5 text-sky-400" />
+              <span>{isVi ? 'Workspace (No UI)' : 'Workspace (No UI)'}</span>
+            </button>
+
+            <button
+              onClick={() => triggerCapture({ format: 'current', scope: 'fullscreen' })}
+              className="py-2 px-2.5 rounded-lg bg-purple-950/60 hover:bg-purple-900/80 text-purple-200 border border-purple-600/50 text-[11px] font-medium transition flex items-center justify-center space-x-1.5 shadow"
+              title={isVi ? "Chụp toàn bộ giao diện làm việc (Kèm thanh Ribbon, Sidebar và Telemetry)" : "Capture entire application screen (With Ribbon, Sidebar, and Telemetry UI)"}
+            >
+              <Monitor className="w-3.5 h-3.5 text-purple-400" />
+              <span>{isVi ? 'Toàn màn hình (With UI)' : 'Full App (With UI)'}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

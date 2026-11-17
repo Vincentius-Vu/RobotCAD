@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import html2canvas from 'html2canvas';
 import { SceneManager } from './SceneManager';
 import { useRobotStore } from '../../store/robotStore';
 import { useMobileRobotStore } from '../../store/mobileRobotStore';
@@ -199,12 +200,47 @@ export const Canvas3D: React.FC = () => {
     }
   }, [cameraSettings]);
 
-  // 11. Screenshot capture trigger
+  // 11. Screenshot capture trigger (Workspace vs Fullscreen with UI)
   useEffect(() => {
-    if (sceneManagerRef.current && captureRequest) {
+    if (!captureRequest || !sceneManagerRef.current) return;
+
+    if (captureRequest.scope === 'fullscreen') {
+      const captureFullscreen = async () => {
+        try {
+          // Render current 3D frame immediately to ensure the buffer is fresh
+          sceneManagerRef.current?.renderNow();
+
+          // Wait a brief tick (80ms) for modal backdrop unmounting
+          await new Promise((resolve) => setTimeout(resolve, 80));
+
+          const rootEl = document.getElementById('root') || document.body;
+          const canvas = await html2canvas(rootEl, {
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#020617', // slate-950
+            scale: Math.min(2, window.devicePixelRatio || 1.5),
+            logging: false,
+          });
+
+          const dataUrl = canvas.toDataURL('image/png');
+          const link = document.createElement('a');
+          const robotName = robotModel?.modelName || 'RobotCAD';
+          const prefix = captureRequest.customFileName || `${robotName.replace(/\s+/g, '_')}_FullView`;
+          link.download = `${prefix}_with_UI_${Date.now()}.png`;
+          link.href = dataUrl;
+          link.click();
+        } catch (err) {
+          console.error('Failed to capture full-screen screenshot:', err);
+          // Fallback to workspace capture
+          sceneManagerRef.current?.captureScreenshot(captureRequest);
+        }
+      };
+
+      captureFullscreen();
+    } else {
       sceneManagerRef.current.captureScreenshot(captureRequest);
     }
-  }, [captureRequest]);
+  }, [captureRequest, robotModel]);
 
   // 12. Planned trajectory & waypoint visualizer
   useEffect(() => {

@@ -99,6 +99,7 @@ interface RobotStoreState {
     resolutionScale?: number;
     dpi?: number;
     customFileName?: string;
+    scope?: 'workspace' | 'fullscreen';
     timestamp: number;
   } | null;
 
@@ -167,6 +168,7 @@ interface RobotStoreState {
     resolutionScale?: number;
     dpi?: number;
     customFileName?: string;
+    scope?: 'workspace' | 'fullscreen';
   } | 'white' | 'transparent' | 'current') => void;
   startVideoRecording: () => void;
   stopVideoRecording: () => void;
@@ -883,7 +885,7 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
     })),
   triggerCapture: (options = 'current') => {
     if (typeof options === 'string') {
-      set({ captureRequest: { format: options, timestamp: Date.now() } });
+      set({ captureRequest: { format: options, scope: 'workspace', timestamp: Date.now() } });
     } else {
       set({
         captureRequest: {
@@ -891,6 +893,7 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
           resolutionScale: options?.resolutionScale,
           dpi: options?.dpi || 150,
           customFileName: options?.customFileName,
+          scope: options?.scope || 'workspace',
           timestamp: Date.now(),
         },
       });

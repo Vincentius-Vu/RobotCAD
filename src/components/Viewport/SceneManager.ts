@@ -414,6 +414,13 @@ export class SceneManager {
   }
 
   /**
+   * Immediately renders a frame to ensure current buffer is fresh
+   */
+  public renderNow(): void {
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  /**
    * Exports high-resolution PNG snapshot with customizable DPI for textbooks, LaTeX, or slides
    */
   public captureScreenshot(options: {
