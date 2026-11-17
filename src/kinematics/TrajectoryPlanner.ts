@@ -6,8 +6,14 @@ import {
   TrajectoryPlan,
   TrajectorySample,
   TrajectoryPreset,
+  TrajectoryOptions,
 } from '../types/trajectory';
 import { RobotKinematics } from './RobotKinematics';
+import {
+  DoubleTanhProfileGenerator,
+  logCoshStable,
+  tanhPade,
+} from './DoubleTanhProfileGenerator';
 
 export class TrajectoryPlanner {
   /**
@@ -17,7 +23,8 @@ export class TrajectoryPlanner {
     waypoints: Waypoint[],
     type: TrajectoryInterpolationType,
     robotModel: RobotModel,
-    timeStep = 0.02
+    timeStep = 0.02,
+    options?: TrajectoryOptions
   ): TrajectoryPlan {
     if (waypoints.length === 0) {
       return {
@@ -26,6 +33,8 @@ export class TrajectoryPlanner {
         timeStep,
         waypoints: [],
         interpolationType: type,
+        doubleTanhMode: options?.doubleTanhMode,
+        usePadeApproximation: options?.usePadeApproximation,
       };
     }
 
@@ -46,6 +55,8 @@ export class TrajectoryPlanner {
         timeStep,
         waypoints,
         interpolationType: type,
+        doubleTanhMode: options?.doubleTanhMode,
+        usePadeApproximation: options?.usePadeApproximation,
       };
     }
 
@@ -53,7 +64,7 @@ export class TrajectoryPlanner {
       return this.planCartesianLinearTrajectory(waypoints, robotModel, timeStep);
     }
 
-    return this.planJointSpaceTrajectory(waypoints, type, robotModel, timeStep);
+    return this.planJointSpaceTrajectory(waypoints, type, robotModel, timeStep, options);
   }
 
   /**
@@ -63,7 +74,8 @@ export class TrajectoryPlanner {
     waypoints: Waypoint[],
     type: TrajectoryInterpolationType,
     robotModel: RobotModel,
-    timeStep: number
+    timeStep: number,
+    options?: TrajectoryOptions
   ): TrajectoryPlan {
     const dof = robotModel.dof;
     const numSegments = waypoints.length - 1;
@@ -131,7 +143,9 @@ export class TrajectoryPlanner {
             qd_t[j] = qd;
             qdd_t[j] = qdd;
           } else if (type === 'double-tanh') {
-            const { q, qd, qdd } = this.evalDoubleTanh(q0[j], q1[j], t, T);
+            const margin = options?.doubleTanhMode === 'time-optimized' ? 2.8 : 3.8;
+            const usePade = options?.usePadeApproximation ?? false;
+            const { q, qd, qdd } = this.evalDoubleTanh(q0[j], q1[j], t, T, margin, usePade);
             q_t[j] = q;
             qd_t[j] = qd;
             qdd_t[j] = qdd;
@@ -185,6 +199,8 @@ export class TrajectoryPlanner {
       timeStep,
       waypoints,
       interpolationType: type,
+      doubleTanhMode: options?.doubleTanhMode,
+      usePadeApproximation: options?.usePadeApproximation,
     };
   }
 
@@ -528,48 +544,110 @@ export class TrajectoryPlanner {
 
   /**
    * Evaluates Proposed Unified Double-Tanh (UDT) Profile
-   * Infinitely differentiable C^inf smooth trajectory with intrinsic bounds and zero shock.
+   * Infinitely differentiable C^inf smooth trajectory with intrinsic bounds, exact boundary mollification,
+   * and support for both Ultra-Smooth (Mc=3.8) and Time-Optimized TODT (Mc=2.8) modes.
    */
-  private static evalDoubleTanh(q0: number, q1: number, t: number, T: number) {
+  private static evalDoubleTanh(
+    q0: number,
+    q1: number,
+    t: number,
+    T: number,
+    margin: number = 3.8,
+    usePade: boolean = false
+  ) {
     const dq = q1 - q0;
     if (Math.abs(dq) < 1e-9 || T <= 1e-6) {
       return { q: q0, qd: 0, qdd: 0 };
     }
     const tClamped = Math.max(0, Math.min(t, T));
-    const sig = 0.055 * T;
-    const t1 = 0.25 * T;
+
+    // Dynamic morphology synthesis: T = 2 * Mc * sig + dtCruise.
+    // For balanced acceleration/cruise partition (dtCruise ~ 0.5 T):
+    // 2 * margin * sig = 0.5 * T => sig = (0.5 * T) / (2 * margin)
+    const sig = (0.5 * T) / (2.0 * margin);
+    const t1 = margin * sig;
     const t2 = T - t1;
 
-    const logcosh = (x: number): number => {
-      const ax = Math.abs(x);
-      return ax > 20.0 ? ax - Math.LN2 : ax - Math.LN2 + Math.log1p(Math.exp(-2.0 * ax));
-    };
+    const th = (u: number) => (usePade ? tanhPade(u) : Math.tanh(u));
 
     const u1_0 = -t1 / sig;
     const u2_0 = -t2 / sig;
-    const v0_raw = 0.5 * (Math.tanh(u1_0) - Math.tanh(u2_0));
-    const s0_raw = 0.5 * sig * (logcosh(u1_0) - logcosh(u2_0));
-    const a0_raw = (0.5 / sig) * ((1.0 - Math.pow(Math.tanh(u1_0), 2)) - (1.0 - Math.pow(Math.tanh(u2_0), 2)));
+    const v0_raw = 0.5 * (th(u1_0) - th(u2_0));
+    const s0_raw = 0.5 * sig * (logCoshStable(u1_0) - logCoshStable(u2_0));
+    const a0_raw = (0.5 / sig) * ((1.0 - Math.pow(th(u1_0), 2)) - (1.0 - Math.pow(th(u2_0), 2)));
 
     const u1_T = (T - t1) / sig;
     const u2_T = (T - t2) / sig;
-    const sT_raw = 0.5 * sig * (logcosh(u1_T) - logcosh(u2_T));
+    const sT_raw = 0.5 * sig * (logCoshStable(u1_T) - logCoshStable(u2_T));
 
     const area_unit = (sT_raw - s0_raw) - v0_raw * T;
     const scale = dq / area_unit;
 
     const u1 = (tClamped - t1) / sig;
     const u2 = (tClamped - t2) / sig;
-    const t_u1 = Math.tanh(u1);
-    const t_u2 = Math.tanh(u2);
+    const t_u1 = th(u1);
+    const t_u2 = th(u2);
     const s2_u1 = 1.0 - t_u1 * t_u1;
     const s2_u2 = 1.0 - t_u2 * t_u2;
 
     const v = scale * (0.5 * (t_u1 - t_u2) - v0_raw);
     const a = scale * ((0.5 / sig) * (s2_u1 - s2_u2) - a0_raw * (1.0 - 2.0 * tClamped / T));
-    const s = q0 + scale * (0.5 * sig * (logcosh(u1) - logcosh(u2)) - s0_raw - v0_raw * tClamped);
+    const s = q0 + scale * (0.5 * sig * (logCoshStable(u1) - logCoshStable(u2)) - s0_raw - v0_raw * tClamped);
 
     return { q: s, qd: v, qdd: a };
+  }
+
+  /**
+   * Spatio-Temporal Multi-DOF Trajectory Duration Auto-Synchronizer
+   * Evaluates joint angular deltas across all waypoints and automatically synthesizes
+   * optimal transit durations T_sync for each segment based on robot limits.
+   */
+  public static computeAutoSyncDurations(
+    waypoints: Waypoint[],
+    robotModel: RobotModel,
+    margin: number = 3.8
+  ): number[] {
+    const numSegments = waypoints.length - 1;
+    if (numSegments <= 0) return [];
+    const dof = robotModel.dof;
+    const synchronizedDurations: number[] = [];
+
+    // Realistic joint velocity, acceleration, and jerk limits (deg/s, deg/s^2, deg/s^3)
+    const vMaxDefault = 120.0; // deg/s
+    const aMaxDefault = 200.0; // deg/s^2
+    const jMaxDefault = 500.0; // deg/s^3
+
+    for (let seg = 0; seg < numSegments; seg++) {
+      const q0 = waypoints[seg].jointAngles;
+      const q1 = waypoints[seg + 1].jointAngles;
+      const dqList: number[] = [];
+      const vMaxList: number[] = [];
+      const aMaxList: number[] = [];
+      const jMaxList: number[] = [];
+
+      for (let j = 0; j < dof; j++) {
+        dqList.push(q1[j] - q0[j]);
+        // Scale limits: wrist joints can move faster, shoulder/base joints heavier
+        const scale = j < 3 ? 0.8 : 1.25;
+        vMaxList.push(vMaxDefault * scale);
+        aMaxList.push(aMaxDefault * scale);
+        jMaxList.push(jMaxDefault * scale);
+      }
+
+      const syncResult = DoubleTanhProfileGenerator.computeMultiDOFSynchronized(
+        dqList,
+        vMaxList,
+        aMaxList,
+        jMaxList,
+        margin
+      );
+
+      // Clamp between 0.5s and 10.0s for safe industrial visualization
+      const segT = Number(Math.max(0.5, Math.min(10.0, syncResult.tSync)).toFixed(2));
+      synchronizedDurations.push(segT);
+    }
+
+    return synchronizedDurations;
   }
 
   /**

@@ -74,6 +74,11 @@ export const LeftSidebar: React.FC = () => {
     removeWaypoint,
     interpolationType,
     setInterpolationType,
+    doubleTanhMode,
+    setDoubleTanhMode,
+    usePadeApproximation,
+    setUsePadeApproximation,
+    autoSyncWaypointDurations,
     loadPresetTrajectory,
     clearWaypoints,
     currentRobotId,
@@ -490,6 +495,75 @@ export const LeftSidebar: React.FC = () => {
                 <option value="cartesian-linear">Cartesian Straight Line (SLERP)</option>
               </select>
             </div>
+
+            {/* Double-Tanh Advanced Morphology & Real-Time Tuning */}
+            {interpolationType === 'double-tanh' && (
+              <div className="bg-slate-950/80 border border-purple-500/30 rounded-lg p-2.5 space-y-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-purple-400 flex items-center gap-1">
+                    <Zap className="w-3.5 h-3.5 text-purple-400" />
+                    Double-Tanh Tuning (C^∞)
+                  </span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-950 border border-purple-800 text-purple-300 font-mono">
+                    {doubleTanhMode === 'time-optimized' ? 'TODT Mc=2.8' : 'Smooth Mc=3.8'}
+                  </span>
+                </div>
+
+                {/* Profile Mode: Ultra-Smooth vs TODT */}
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    onClick={() => setDoubleTanhMode('ultra-smooth')}
+                    className={`px-2 py-1.5 rounded text-[10px] font-medium transition text-center border ${
+                      doubleTanhMode === 'ultra-smooth'
+                        ? 'bg-purple-600/30 border-purple-500 text-purple-200'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                    title="Mc = 3.8: Anti-vibration, anti-slosh, zero snap impulses"
+                  >
+                    ★ Ultra-Smooth
+                  </button>
+                  <button
+                    onClick={() => setDoubleTanhMode('time-optimized')}
+                    className={`px-2 py-1.5 rounded text-[10px] font-medium transition text-center border ${
+                      doubleTanhMode === 'time-optimized'
+                        ? 'bg-amber-600/30 border-amber-500 text-amber-200'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                    title="Mc = 2.8: Time-Optimized Double-Tanh (TODT) reducing cycle time by ~18%"
+                  >
+                    ⚡ Fast TODT
+                  </button>
+                </div>
+
+                {/* MCU Evaluation Engine: Padé Approximant */}
+                <div className="flex items-center justify-between pt-1 border-t border-slate-850/80">
+                  <label className="flex items-center gap-1.5 cursor-pointer text-[10px] text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={usePadeApproximation}
+                      onChange={(e) => setUsePadeApproximation(e.target.checked)}
+                      className="rounded border-slate-700 bg-slate-900 text-purple-500 focus:ring-0 w-3 h-3 cursor-pointer"
+                    />
+                    <span className="flex items-center gap-1">
+                      <Cpu className="w-3 h-3 text-cyan-400" />
+                      Padé [3/2] MCU Mode (18 cycles)
+                    </span>
+                  </label>
+                </div>
+
+                {/* Multi-DOF Auto-Sync Button */}
+                {waypoints.length >= 2 && (
+                  <button
+                    onClick={() => autoSyncWaypointDurations()}
+                    className="w-full flex items-center justify-center gap-1.5 py-1 px-2 rounded bg-purple-950/60 hover:bg-purple-900/60 border border-purple-800/80 text-purple-200 text-[10px] font-medium transition shadow-sm"
+                    title="Synchronize multi-joint waypoint transit durations based on robot kinematic limits (T_sync = max T_i)"
+                  >
+                    <CheckCircle2 className="w-3 h-3 text-purple-400" />
+                    <span>Auto-Sync Multi-DOF Durations</span>
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Waypoints Sequence List */}
             <div className="space-y-2 pt-2 border-t border-slate-850">

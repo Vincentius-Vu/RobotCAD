@@ -17,6 +17,7 @@ import {
   Waypoint,
   TrajectoryInterpolationType,
   TrajectoryPlan,
+  DoubleTanhMode,
 } from '../types/trajectory';
 import { WorkspaceCloudData, WorkspaceSettings } from '../types/workspace';
 import { WorkspaceMode, RightInspectorTab, BottomDockTab } from '../types/ui';
@@ -84,6 +85,8 @@ interface RobotStoreState {
   waypoints: Waypoint[];
   activeTrajectory: TrajectoryPlan | null;
   interpolationType: TrajectoryInterpolationType;
+  doubleTanhMode: DoubleTanhMode;
+  usePadeApproximation: boolean;
   playbackState: {
     isPlaying: boolean;
     currentTime: number;
@@ -197,6 +200,9 @@ interface RobotStoreState {
   updateWaypointDuration: (id: string, duration: number) => void;
   updateWaypoint: (id: string, updates: Partial<Waypoint>) => void;
   setInterpolationType: (type: TrajectoryInterpolationType) => void;
+  setDoubleTanhMode: (mode: DoubleTanhMode) => void;
+  setUsePadeApproximation: (use: boolean) => void;
+  autoSyncWaypointDurations: () => void;
   generateTrajectory: () => void;
   playTrajectory: () => void;
   pauseTrajectory: () => void;
@@ -668,6 +674,8 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
   waypoints: [],
   activeTrajectory: null,
   interpolationType: 'quintic',
+  doubleTanhMode: 'ultra-smooth',
+  usePadeApproximation: false,
   playbackState: {
     isPlaying: false,
     currentTime: 0,
@@ -1136,13 +1144,49 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
     get().generateTrajectory();
   },
 
+  setDoubleTanhMode: (mode) => {
+    set({ doubleTanhMode: mode });
+    get().generateTrajectory();
+  },
+
+  setUsePadeApproximation: (use) => {
+    set({ usePadeApproximation: use });
+    get().generateTrajectory();
+  },
+
+  autoSyncWaypointDurations: () => {
+    const { waypoints, robotModel, doubleTanhMode } = get();
+    if (!robotModel || waypoints.length < 2) return;
+    const margin = doubleTanhMode === 'time-optimized' ? 2.8 : 3.8;
+    const syncedDurations = TrajectoryPlanner.computeAutoSyncDurations(waypoints, robotModel, margin);
+    const updated = waypoints.map((wp, idx) => {
+      if (idx === 0) return wp;
+      const dur = syncedDurations[idx - 1] ?? wp.segmentDuration;
+      return { ...wp, segmentDuration: dur };
+    });
+    set({ waypoints: updated });
+    get().generateTrajectory();
+  },
+
   generateTrajectory: () => {
-    const { waypoints, interpolationType, robotModel } = get();
+    const {
+      waypoints,
+      interpolationType,
+      robotModel,
+      doubleTanhMode,
+      usePadeApproximation,
+    } = get();
     if (!robotModel || waypoints.length === 0) {
       set({ activeTrajectory: null });
       return;
     }
-    const plan = TrajectoryPlanner.planTrajectory(waypoints, interpolationType, robotModel);
+    const plan = TrajectoryPlanner.planTrajectory(
+      waypoints,
+      interpolationType,
+      robotModel,
+      0.02,
+      { doubleTanhMode, usePadeApproximation }
+    );
     set({
       activeTrajectory: plan,
       playbackState: {

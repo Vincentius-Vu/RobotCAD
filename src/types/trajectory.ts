@@ -8,6 +8,13 @@ export type TrajectoryInterpolationType =
   | 's-curve'
   | 'cartesian-linear';
 
+export type DoubleTanhMode = 'ultra-smooth' | 'time-optimized';
+
+export interface TrajectoryOptions {
+  doubleTanhMode?: DoubleTanhMode;
+  usePadeApproximation?: boolean;
+}
+
 export interface Waypoint {
   id: string;
   name: string;
@@ -32,6 +39,8 @@ export interface TrajectoryPlan {
   timeStep: number; // In seconds (default 0.02s = 50Hz)
   waypoints: Waypoint[];
   interpolationType: TrajectoryInterpolationType;
+  doubleTanhMode?: DoubleTanhMode;
+  usePadeApproximation?: boolean;
 }
 
 export interface TrajectoryPreset {
