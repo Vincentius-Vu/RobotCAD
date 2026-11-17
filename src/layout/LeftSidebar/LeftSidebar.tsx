@@ -101,6 +101,7 @@ export const LeftSidebar: React.FC = () => {
     exportDynamicsProfileJSON,
     importDynamicsProfileJSON,
     exportScientificBenchmarkCSV,
+    uiTheme,
   } = useRobotStore();
 
   const [dynTuningMode, setDynTuningMode] = React.useState<'master' | 'joints'>('master');
@@ -263,7 +264,7 @@ export const LeftSidebar: React.FC = () => {
                           style={{
                             backgroundColor: `${linkColor}33`,
                             borderColor: linkColor,
-                            color: '#f8fafc',
+                            color: uiTheme === 'light' ? '#0f172a' : '#f8fafc',
                           }}
                           title={`${t.manipulator.mechanicalLink} L${joint.jointIndex}`}
                         >

@@ -4,7 +4,7 @@ import { DEFAULT_LINK_PALETTE } from '../../services/robotLoader';
 import { useTranslation } from '../../i18n';
 
 export const DHTable: React.FC = () => {
-  const { robotModel, jointAngles } = useRobotStore();
+  const { robotModel, jointAngles, uiTheme } = useRobotStore();
   const { language } = useTranslation();
 
   if (!robotModel) return null;
@@ -56,7 +56,7 @@ export const DHTable: React.FC = () => {
                         style={{
                           backgroundColor: `${linkColor}33`,
                           borderColor: linkColor,
-                          color: '#f8fafc',
+                          color: uiTheme === 'light' ? '#0f172a' : '#f8fafc',
                         }}
                         title={`${language === 'vi' ? 'Khâu cơ khí' : 'Rigid Link'} L${idx + 1}`}
                       >

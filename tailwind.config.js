@@ -19,6 +19,7 @@ export default {
           700: 'rgb(var(--color-slate-700) / <alpha-value>)',
           750: 'rgb(var(--color-slate-750) / <alpha-value>)',
           800: 'rgb(var(--color-slate-800) / <alpha-value>)',
+          850: 'rgb(var(--color-slate-850) / <alpha-value>)',
           900: 'rgb(var(--color-slate-900) / <alpha-value>)',
           950: 'rgb(var(--color-slate-950) / <alpha-value>)',
         },
