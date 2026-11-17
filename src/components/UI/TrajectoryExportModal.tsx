@@ -195,76 +195,74 @@ export const TrajectoryExportModal: React.FC<TrajectoryExportModalProps> = ({
             </div>
           </div>
 
-          {/* Conditional Options: If Workspace Only -> Show DPI & Background options */}
+          {/* 2. Print Resolution (DPI) Selection - Available for BOTH Workspace and Fullscreen modes */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
+              <span className="flex items-center space-x-1.5">
+                <FileImage className="w-3.5 h-3.5 text-sky-400" />
+                <span>{isVi ? 'Độ phân giải chụp ảnh (DPI Resolution)' : 'Capture Resolution (DPI)'}</span>
+              </span>
+              <span className="text-[10px] font-mono text-sky-400">
+                Scale: {(dpi / 96).toFixed(1)}x {scope === 'fullscreen' && '(Retina Scale)'}
+              </span>
+            </label>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {dpiOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setDpi(opt.value)}
+                  className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
+                    dpi === opt.value
+                      ? 'bg-sky-600/20 border-sky-500 text-white shadow-md shadow-sky-600/10'
+                      : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold font-mono">{opt.label}</span>
+                    <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono">
+                      {opt.badge}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1 line-clamp-2">{opt.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Conditional Options: If Workspace Only -> Show Background options; If Fullscreen -> Show Full UI Guide */}
           {scope === 'workspace' ? (
-            <>
-              {/* DPI Selection */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
-                  <span className="flex items-center space-x-1.5">
-                    <FileImage className="w-3.5 h-3.5 text-sky-400" />
-                    <span>{isVi ? 'Độ phân giải in ấn (DPI Resolution)' : 'Print Resolution (DPI)'}</span>
-                  </span>
-                  <span className="text-[10px] font-mono text-sky-400">
-                    Scale: {(dpi / 96).toFixed(1)}x
-                  </span>
-                </label>
+            /* Background Format Selection */
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-300 flex items-center space-x-1.5">
+                <Layers className="w-3.5 h-3.5 text-amber-400" />
+                <span>{isVi ? 'Màu nền không gian 3D' : 'Background Style'}</span>
+              </label>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {dpiOptions.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setDpi(opt.value)}
-                      className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
-                        dpi === opt.value
-                          ? 'bg-sky-600/20 border-sky-500 text-white shadow-md shadow-sky-600/10'
-                          : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold font-mono">{opt.label}</span>
-                        <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono">
-                          {opt.badge}
-                        </span>
+              <div className="space-y-1.5">
+                {formatOptions.map((opt) => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setFormat(opt.id)}
+                    className={`w-full p-2.5 rounded-xl border text-left transition flex items-center justify-between ${
+                      format === opt.id
+                        ? 'bg-sky-600/20 border-sky-500 text-white'
+                        : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="pr-4">
+                      <h4 className="text-xs font-medium text-slate-200">{opt.label}</h4>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{opt.desc}</p>
+                    </div>
+                    {format === opt.id && (
+                      <div className="w-5 h-5 rounded-full bg-sky-500 text-white flex items-center justify-center shrink-0">
+                        <Check className="w-3 h-3 stroke-[3]" />
                       </div>
-                      <p className="text-[10px] text-slate-400 mt-1 line-clamp-2">{opt.desc}</p>
-                    </button>
-                  ))}
-                </div>
+                    )}
+                  </button>
+                ))}
               </div>
-
-              {/* Background Format Selection */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-300 flex items-center space-x-1.5">
-                  <Layers className="w-3.5 h-3.5 text-amber-400" />
-                  <span>{isVi ? 'Màu nền không gian 3D' : 'Background Style'}</span>
-                </label>
-
-                <div className="space-y-1.5">
-                  {formatOptions.map((opt) => (
-                    <button
-                      key={opt.id}
-                      onClick={() => setFormat(opt.id)}
-                      className={`w-full p-2.5 rounded-xl border text-left transition flex items-center justify-between ${
-                        format === opt.id
-                          ? 'bg-sky-600/20 border-sky-500 text-white'
-                          : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700'
-                      }`}
-                    >
-                      <div className="pr-4">
-                        <h4 className="text-xs font-medium text-slate-200">{opt.label}</h4>
-                        <p className="text-[10px] text-slate-400 mt-0.5">{opt.desc}</p>
-                      </div>
-                      {format === opt.id && (
-                        <div className="w-5 h-5 rounded-full bg-sky-500 text-white flex items-center justify-center shrink-0">
-                          <Check className="w-3 h-3 stroke-[3]" />
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </>
+            </div>
           ) : (
             /* Fullscreen with UI Guide Banner */
             <div className="p-3.5 bg-slate-950/90 rounded-xl border border-purple-500/30 text-xs text-slate-300 space-y-2">
@@ -274,8 +272,8 @@ export const TrajectoryExportModal: React.FC<TrajectoryExportModalProps> = ({
               </div>
               <p className="text-slate-400 text-[11px] leading-relaxed">
                 {isVi
-                  ? 'Hệ thống sẽ chụp toàn bộ giao diện làm việc với tỷ lệ điểm ảnh chuẩn màn hình (Retina / 2X). Đảm bảo các cửa sổ phụ hoặc dao động ký cần chụp đều đang mở trước khi xuất ảnh.'
-                  : 'Captures the entire studio layout at native display pixel ratio. Ensure any desired oscilloscope docks or inspector panels are open before capturing.'}
+                  ? `Hệ thống sẽ render lại toàn bộ màn hình ứng dụng với độ nét ${dpi} DPI (Scale: ${(dpi / 96).toFixed(1)}x). Hãy đảm bảo các cửa sổ dao động ký hoặc thanh công cụ cần chụp đều đang mở.`
+                  : `Captures the entire studio layout rendered at ${dpi} DPI (${(dpi / 96).toFixed(1)}x scale factor). Ensure desired sidebars or oscilloscope waveforms are open.`}
               </p>
             </div>
           )}
@@ -292,12 +290,10 @@ export const TrajectoryExportModal: React.FC<TrajectoryExportModalProps> = ({
                 {scope === 'workspace' ? (isVi ? 'Workspace 3D (No UI)' : '3D Workspace (No UI)') : (isVi ? 'Toàn màn hình Studio (With UI)' : 'Full Studio (With UI)')}
               </span>
             </div>
-            {scope === 'workspace' && (
-              <div className="flex justify-between">
-                <span>{isVi ? 'Độ phân giải:' : 'Effective Resolution:'}</span>
-                <span className="text-amber-400">{dpi} DPI ({(dpi / 96).toFixed(1)}x Scale)</span>
-              </div>
-            )}
+            <div className="flex justify-between">
+              <span>{isVi ? 'Độ phân giải:' : 'Effective Resolution:'}</span>
+              <span className="text-amber-400">{dpi} DPI ({(dpi / 96).toFixed(1)}x Scale)</span>
+            </div>
           </div>
         </div>
 
@@ -316,8 +312,8 @@ export const TrajectoryExportModal: React.FC<TrajectoryExportModalProps> = ({
             <Download className="w-4 h-4" />
             <span>
               {scope === 'fullscreen'
-                ? (isVi ? 'Chụp Toàn Màn Hình (With UI)' : 'Capture Full Screen (With UI)')
-                : (isVi ? `Xuất ảnh ${dpi} DPI (No UI)` : `Export ${dpi} DPI (No UI)`)}
+                ? (isVi ? `Chụp Toàn Màn Hình ${dpi} DPI (With UI)` : `Capture Full Screen ${dpi} DPI (With UI)`)
+                : (isVi ? `Xuất ảnh Workspace ${dpi} DPI (No UI)` : `Export Workspace ${dpi} DPI (No UI)`)}
             </span>
           </button>
         </div>

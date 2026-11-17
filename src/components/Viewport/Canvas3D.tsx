@@ -213,12 +213,17 @@ export const Canvas3D: React.FC = () => {
           // Wait a brief tick (80ms) for modal backdrop unmounting
           await new Promise((resolve) => setTimeout(resolve, 80));
 
+          const targetDpi = captureRequest.dpi || 150;
+          // Calculate scale factor: 96 DPI -> 1.0x, 150 DPI -> 1.56x, 300 DPI -> 3.125x, 600 DPI -> 4.0x (capped to safe texture memory)
+          const requestedScale = targetDpi / 96;
+          const scale = Math.max(1, Math.min(4, requestedScale));
+
           const rootEl = document.getElementById('root') || document.body;
           const canvas = await html2canvas(rootEl, {
             useCORS: true,
             allowTaint: true,
             backgroundColor: '#020617', // slate-950
-            scale: Math.min(2, window.devicePixelRatio || 1.5),
+            scale: scale,
             logging: false,
           });
 
@@ -226,7 +231,7 @@ export const Canvas3D: React.FC = () => {
           const link = document.createElement('a');
           const robotName = robotModel?.modelName || 'RobotCAD';
           const prefix = captureRequest.customFileName || `${robotName.replace(/\s+/g, '_')}_FullView`;
-          link.download = `${prefix}_with_UI_${Date.now()}.png`;
+          link.download = `${prefix}_${targetDpi}DPI_with_UI_${Date.now()}.png`;
           link.href = dataUrl;
           link.click();
         } catch (err) {
