@@ -790,7 +790,7 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
             kp: profile.joints.map((j) => j.kp),
             kd: profile.joints.map((j) => j.kd),
           },
-          smcSettings: {
+          smcSettings: profile.smcSettings || {
             lambda: new Array(model.dof).fill(20),
             switchingGain: profile.joints.map((j) => Math.max(10, Math.round(j.maxTorque * 0.25))),
             boundaryLayer: new Array(model.dof).fill(0.05),
@@ -1436,11 +1436,20 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
       ...settings,
     };
 
-    if (activeDynamicsProfile && (settings.controllerType || settings.payloadMass !== undefined)) {
+    if (activeDynamicsProfile) {
       const updatedProfile: RobotDynamicsProfile = {
         ...activeDynamicsProfile,
         controllerType: settings.controllerType || activeDynamicsProfile.controllerType,
         defaultPayloadKg: settings.payloadMass !== undefined ? settings.payloadMass : activeDynamicsProfile.defaultPayloadKg,
+        timeStep: settings.timeStep || activeDynamicsProfile.timeStep || 0.002,
+        smcSettings: settings.smcSettings || activeDynamicsProfile.smcSettings,
+        joints: settings.gains?.kp
+          ? activeDynamicsProfile.joints.map((j, idx) => ({
+              ...j,
+              kp: settings.gains?.kp?.[idx] ?? j.kp,
+              kd: settings.gains?.kd?.[idx] ?? j.kd,
+            }))
+          : activeDynamicsProfile.joints,
         lastUpdated: new Date().toISOString(),
       };
       RobotDynamicsProfileManager.saveProfileForRobot(updatedProfile);
@@ -1715,6 +1724,7 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
           kp: profile.joints.map((j) => j.kp),
           kd: profile.joints.map((j) => j.kd),
         },
+        smcSettings: profile.smcSettings || dynamicsSettings.smcSettings,
       },
     });
 

@@ -1,4 +1,4 @@
-import { ControllerType, InertialParameters } from '../types/dynamics';
+import { ControllerType, InertialParameters, SMCSettings } from '../types/dynamics';
 import { RobotModel } from '../types/robot';
 import { MotorDriveParameters } from '../types/motor';
 import { MotorDriveEngine } from '../physics/motors/MotorDriveEngine';
@@ -22,6 +22,7 @@ export interface RobotDynamicsProfile {
   defaultPayloadKg: number;
   timeStep: number;
   joints: JointMotorConfig[];
+  smcSettings?: SMCSettings;
   isCustomTuned?: boolean;
   lastUpdated?: string;
 }
@@ -875,6 +876,7 @@ export class RobotDynamicsProfileManager {
         defaultPayloadKg: Number(parsed.defaultPayloadKg) || 0,
         timeStep: Number(parsed.timeStep) || 0.002,
         joints: sanitizedJoints,
+        smcSettings: parsed.smcSettings,
         isCustomTuned: true,
         lastUpdated: new Date().toISOString(),
       };
