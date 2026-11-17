@@ -73,8 +73,8 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
     startVideoRecording,
     stopVideoRecording,
     demoState,
-    backgroundTheme,
-    setBackgroundTheme,
+    uiTheme,
+    toggleUiTheme,
   } = useRobotStore();
 
   const {
@@ -98,7 +98,7 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
     return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
   };
 
-  const isWhitePaper = backgroundTheme === 'academic-white';
+  const isLight = uiTheme === 'light';
 
   return (
     <header className="h-14 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between select-none z-30 shrink-0">
@@ -286,15 +286,13 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
           </button>
         </div>
 
-        {/* Paper White / Studio Dark Quick Toggle */}
+        {/* UI Theme Light / Dark Quick Toggle */}
         <button
-          onClick={() =>
-            setBackgroundTheme(isWhitePaper ? 'studio-dark' : 'academic-white')
-          }
+          onClick={toggleUiTheme}
           className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-750 border border-slate-700 transition"
-          title={isWhitePaper ? t.topRibbon.darkModeTitle : t.topRibbon.paperWhiteTitle}
+          title={isLight ? t.topRibbon.darkModeTitle : t.topRibbon.paperWhiteTitle}
         >
-          {isWhitePaper ? (
+          {isLight ? (
             <Moon className="w-3.5 h-3.5 text-sky-400" />
           ) : (
             <Sun className="w-3.5 h-3.5 text-amber-400" />

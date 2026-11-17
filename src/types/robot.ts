@@ -40,6 +40,7 @@ export interface CartesianPose {
 export type CameraPreset = 'isometric' | 'front' | 'top' | 'side' | 'tcp';
 export type RenderingStyle = 'solid' | 'ghosted';
 export type BackgroundTheme = 'academic-white' | 'technical-light' | 'studio-dark' | 'deep-space';
+export type UITheme = 'dark' | 'light';
 
 export interface LightingSettings {
   ambientIntensity: number;

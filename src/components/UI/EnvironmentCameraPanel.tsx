@@ -4,6 +4,7 @@ import { useRobotStore } from '../../store/robotStore';
 import { BackgroundTheme } from '../../types/robot';
 import {
   Sun,
+  Moon,
   Camera,
   Download,
   Sliders,
@@ -22,6 +23,8 @@ export const EnvironmentCameraPanel: React.FC<EnvironmentCameraPanelProps> = ({ 
   const { language } = useTranslation();
   const isVi = language === 'vi';
   const {
+    uiTheme,
+    setUiTheme,
     backgroundTheme,
     setBackgroundTheme,
     lighting,
@@ -84,6 +87,64 @@ export const EnvironmentCameraPanel: React.FC<EnvironmentCameraPanelProps> = ({ 
       </div>
 
       <div className="p-4 space-y-5 max-h-[calc(100vh-140px)] overflow-y-auto">
+        {/* 0. Application UI Theme (Light / Dark) */}
+        <div>
+          <label className="text-[11px] font-mono uppercase text-slate-400 tracking-wider block mb-2">
+            {language === 'vi' ? 'Application UI Theme (Chế độ giao diện)' : 'Application UI Theme'}
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setUiTheme('dark')}
+              className={`p-2.5 rounded-xl border text-left transition flex items-center justify-between relative ${
+                uiTheme === 'dark'
+                  ? 'border-sky-500 ring-2 ring-sky-500/20 shadow-md bg-slate-800'
+                  : 'border-slate-800 hover:border-slate-700 bg-slate-950/60'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <div className="p-1.5 rounded-lg bg-slate-900 border border-slate-750 text-sky-400">
+                  <Moon className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-slate-200">
+                    {language === 'vi' ? 'Dark Mode' : 'Dark CAD Studio'}
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    {language === 'vi' ? 'Giao diện tối' : 'Default dark UI'}
+                  </div>
+                </div>
+              </div>
+              {uiTheme === 'dark' && <Check className="w-4 h-4 text-sky-400 shrink-0" />}
+            </button>
+
+            <button
+              onClick={() => setUiTheme('light')}
+              className={`p-2.5 rounded-xl border text-left transition flex items-center justify-between relative ${
+                uiTheme === 'light'
+                  ? 'border-sky-500 ring-2 ring-sky-500/20 shadow-md bg-slate-800'
+                  : 'border-slate-800 hover:border-slate-700 bg-slate-950/60'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <div className="p-1.5 rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-400">
+                  <Sun className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-slate-200">
+                    {language === 'vi' ? 'Light Mode' : 'Light Paper UI'}
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    {language === 'vi' ? 'Giao diện sáng' : 'Clean light UI'}
+                  </div>
+                </div>
+              </div>
+              {uiTheme === 'light' && <Check className="w-4 h-4 text-sky-400 shrink-0" />}
+            </button>
+          </div>
+        </div>
+
+        <div className="h-px bg-slate-800" />
+
         {/* 1. Background Theme Presets */}
         <div>
           <label className="text-[11px] font-mono uppercase text-slate-400 tracking-wider block mb-2">

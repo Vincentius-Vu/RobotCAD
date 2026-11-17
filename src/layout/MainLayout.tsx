@@ -32,6 +32,7 @@ export const MainLayout: React.FC = () => {
   const [isOscilloscopeOpen, setIsOscilloscopeOpen] = useState(false);
 
   const {
+    uiTheme,
     activeDomain,
     toggleLeftSidebar,
     toggleRightInspector,
@@ -101,8 +102,13 @@ export const MainLayout: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // Auto-synchronize UI Theme (Dark / Light) to root HTML element
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', uiTheme);
+  }, [uiTheme]);
+
   return (
-    <div className="w-screen h-screen overflow-hidden bg-slate-950 font-sans flex flex-col text-slate-100 select-none">
+    <div data-theme={uiTheme} className="w-screen h-screen overflow-hidden bg-slate-950 font-sans flex flex-col text-slate-100 select-none">
       {/* 1. Top Industrial Ribbon */}
       <TopRibbon
         onOpenEnvCamera={() => setIsEnvCameraOpen(true)}

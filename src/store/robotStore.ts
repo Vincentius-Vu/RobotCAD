@@ -7,6 +7,7 @@ import {
   ViewportOverlaySettings,
   SkeletonMode,
   BackgroundTheme,
+  UITheme,
   LightingSettings,
   CameraSettings,
   ManipulabilityInfo,
@@ -67,6 +68,7 @@ interface RobotStoreState {
   renderingStyle: RenderingStyle;
   overlays: ViewportOverlaySettings;
   backgroundTheme: BackgroundTheme;
+  uiTheme: UITheme;
   lighting: LightingSettings;
   cameraSettings: CameraSettings;
 
@@ -160,6 +162,8 @@ interface RobotStoreState {
   setSkeletonMode: (mode: SkeletonMode) => void;
   toggleSkeletonMode: () => void;
   setBackgroundTheme: (theme: BackgroundTheme) => void;
+  setUiTheme: (theme: UITheme) => void;
+  toggleUiTheme: () => void;
   setLighting: (settings: Partial<LightingSettings>) => void;
   setCameraFov: (fov: number) => void;
   setCameraSettings: (settings: Partial<CameraSettings>) => void;
@@ -631,7 +635,12 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
     showManipulabilityEllipsoid: false,
     showIKGizmo: false,
   },
-  backgroundTheme: 'studio-dark',
+  backgroundTheme:
+    (typeof window !== 'undefined' && localStorage.getItem('robotcad_ui_theme') === 'light')
+      ? 'academic-white'
+      : 'studio-dark',
+  uiTheme:
+    (typeof window !== 'undefined' && (localStorage.getItem('robotcad_ui_theme') as UITheme)) || 'dark',
   lighting: {
     ambientIntensity: 0.7,
     keyLightIntensity: 1.3,
@@ -861,7 +870,29 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
   setTcpPose: (tcpPose) => set({ tcpPose }),
   clearTrace: () => set((state) => ({ traceClearTrigger: state.traceClearTrigger + 1 })),
 
-  setBackgroundTheme: (theme) => set({ backgroundTheme: theme }),
+  setBackgroundTheme: (theme) => {
+    const isLight = theme === 'academic-white' || theme === 'technical-light';
+    const nextUiTheme: UITheme = isLight ? 'light' : 'dark';
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('robotcad_ui_theme', nextUiTheme);
+    }
+    set({ backgroundTheme: theme, uiTheme: nextUiTheme });
+  },
+  setUiTheme: (theme) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('robotcad_ui_theme', theme);
+    }
+    const nextBgTheme = theme === 'light' ? 'academic-white' : 'studio-dark';
+    set({ uiTheme: theme, backgroundTheme: nextBgTheme });
+  },
+  toggleUiTheme: () => {
+    const nextTheme: UITheme = get().uiTheme === 'dark' ? 'light' : 'dark';
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('robotcad_ui_theme', nextTheme);
+    }
+    const nextBgTheme = nextTheme === 'light' ? 'academic-white' : 'studio-dark';
+    set({ uiTheme: nextTheme, backgroundTheme: nextBgTheme });
+  },
   setLighting: (settings) =>
     set((state) => ({
       lighting: {

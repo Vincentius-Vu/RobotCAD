@@ -21,6 +21,7 @@ export const Canvas3D: React.FC = () => {
     overlays,
     traceClearTrigger,
     backgroundTheme,
+    uiTheme,
     lighting,
     cameraSettings,
     captureRequest,
@@ -222,7 +223,7 @@ export const Canvas3D: React.FC = () => {
           const canvas = await html2canvas(rootEl, {
             useCORS: true,
             allowTaint: true,
-            backgroundColor: '#020617', // slate-950
+            backgroundColor: uiTheme === 'light' ? '#f8fafc' : '#020617', // adaptive UI background
             scale: scale,
             logging: false,
           });

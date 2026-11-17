@@ -2,9 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+:root, [data-theme="dark"] {
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   color-scheme: dark;
+
+  /* Standard Tailwind Dark Slate Palette */
+  --color-slate-50: 248 250 252;
+  --color-slate-100: 241 245 249;
+  --color-slate-200: 226 232 240;
+  --color-slate-300: 203 213 225;
+  --color-slate-400: 148 163 184;
+  --color-slate-500: 100 116 139;
+  --color-slate-600: 71 85 105;
+  --color-slate-700: 51 65 85;
+  --color-slate-750: 38 49 66;
+  --color-slate-800: 30 41 59;
+  --color-slate-900: 15 23 42;
+  --color-slate-950: 2 6 23;
+
+  --scrollbar-track: rgba(15, 23, 42, 0.6);
+  --scrollbar-thumb: rgba(51, 65, 85, 0.8);
+  --scrollbar-thumb-hover: rgba(100, 116, 139, 1);
+  --slider-track: #334155;
+  --plot-bg: #090d16;
+  --plot-grid: #1e293b;
+  --plot-text: #64748b;
+  --plot-zero: #334155;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Clean Academic / Technical Light Palette */
+  --color-slate-50: 2 6 23;        /* deepest dark text (#020617) */
+  --color-slate-100: 15 23 42;     /* headings & primary text (#0f172a) */
+  --color-slate-200: 30 41 59;     /* body text (#1e293b) */
+  --color-slate-300: 51 65 85;     /* secondary text (#334155) */
+  --color-slate-400: 71 85 105;    /* muted captions (#475569) */
+  --color-slate-500: 100 116 139;  /* subtle labels (#64748b) */
+  --color-slate-600: 148 163 184;  /* dim indicators (#94a3b8) */
+  --color-slate-700: 203 213 225;  /* light borders (#cbd5e1) */
+  --color-slate-750: 215 224 235;  /* button hovers */
+  --color-slate-800: 226 232 240;  /* buttons, card borders (#e2e8f0) */
+  --color-slate-900: 255 255 255;  /* panel & modal background (#ffffff) */
+  --color-slate-950: 248 250 252;  /* app outer background, inputs (#f8fafc) */
+
+  --scrollbar-track: rgba(241, 245, 249, 0.9);
+  --scrollbar-thumb: rgba(203, 213, 225, 0.9);
+  --scrollbar-thumb-hover: rgba(148, 163, 184, 1);
+  --slider-track: #cbd5e1;
+  --plot-bg: #f8fafc;
+  --plot-grid: #e2e8f0;
+  --plot-text: #475569;
+  --plot-zero: #94a3b8;
 }
 
 code, .font-mono {
@@ -18,16 +68,16 @@ code, .font-mono {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(51, 65, 85, 0.8);
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 1);
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* Range input styling */
@@ -39,7 +89,7 @@ input[type="range"] {
 }
 
 input[type="range"]::-webkit-slider-runnable-track {
-  background: #334155;
+  background: var(--slider-track);
   height: 6px;
   border-radius: 3px;
 }
@@ -63,4 +113,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 input[type="range"]:focus {
   outline: none;
+}
+
+[data-theme="light"] .hover\:text-white:hover {
+  color: rgb(15 23 42) !important;
 }
