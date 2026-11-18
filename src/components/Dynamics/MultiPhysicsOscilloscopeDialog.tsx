@@ -25,6 +25,26 @@ interface MultiPhysicsOscilloscopeDialogProps {
 
 export type OscilloscopeTab = 'kinematics' | 'torques' | 'errors' | 'motors' | 'converter';
 
+const ACADEMIC_JOINT_COLORS = [
+  '#1f77b4', // J1: Deep Academic Blue
+  '#d97706', // J2: Warm Amber / Ochre
+  '#059669', // J3: Emerald Green
+  '#7c3aed', // J4: Royal Purple
+  '#db2777', // J5: Crimson / Rose
+  '#ea580c', // J6: Rust Orange
+  '#0891b2', // J7: Dark Cyan
+];
+
+const CYBER_JOINT_COLORS = [
+  '#38bdf8', // J1: Sky
+  '#f59e0b', // J2: Amber
+  '#10b981', // J3: Emerald
+  '#a855f7', // J4: Purple
+  '#ec4899', // J5: Pink
+  '#f97316', // J6: Orange
+  '#06b6d4', // J7: Cyan
+];
+
 export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDialogProps> = ({
   isOpen,
   onClose,
@@ -45,7 +65,10 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
     stopDynamicsSimulation,
     resetDynamicsSimulation,
     activeWorkspaceMode,
+    uiTheme,
   } = useRobotStore();
+
+  const isLight = uiTheme === 'light';
 
   const [activeTab, setActiveTab] = useState<OscilloscopeTab>('motors');
   const [selectedJoint, setSelectedJoint] = useState<number | 'all'>('all');
@@ -56,15 +79,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
   const popoutWindowRef = useRef<Window | null>(null);
   const [popoutContainer, setPopoutContainer] = useState<HTMLElement | null>(null);
 
-  const jointColors = [
-    '#38bdf8', // J1: Sky
-    '#f59e0b', // J2: Amber
-    '#10b981', // J3: Emerald
-    '#a855f7', // J4: Purple
-    '#ec4899', // J5: Pink
-    '#f97316', // J6: Orange
-    '#06b6d4', // J7: Cyan
-  ];
+  const jointColors = isLight ? ACADEMIC_JOINT_COLORS : CYBER_JOINT_COLORS;
 
   // Auto-calculate trajectory torques if empty
   useEffect(() => {
@@ -77,6 +92,18 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
       }
     }
   }, [trajectoryTorques]);
+
+  // Synchronize Pop-out child window body class and title when theme or language changes
+  useEffect(() => {
+    if (popoutWindowRef.current && !popoutWindowRef.current.closed) {
+      popoutWindowRef.current.document.body.className = isLight
+        ? 'bg-slate-50 text-slate-800 font-sans select-none overflow-hidden m-0 p-0'
+        : 'bg-slate-950 text-slate-100 font-sans select-none overflow-hidden m-0 p-0';
+      popoutWindowRef.current.document.title = isVi
+        ? 'RoboCAD 3D • Multi-Physics Telemetry Oscilloscope (Đa Màn Hình)'
+        : 'RoboCAD 3D • Multi-Physics Telemetry Oscilloscope (Pop-out Window)';
+    }
+  }, [isLight, isVi]);
 
   // Handle Pop-out to Separate Browser Window (Multi-Monitor support)
   const handleOpenPopout = useCallback(() => {
@@ -92,19 +119,28 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
     );
 
     if (!popout) {
-      alert(language === 'vi' ? 'Trình duyệt đã chặn cửa sổ pop-up. Vui lòng cho phép pop-up để mở đồ thị trên màn hình thứ hai.' : 'Browser blocked pop-up window. Please allow pop-ups to open oscilloscope on secondary monitor.');
+      alert(
+        isVi
+          ? 'Trình duyệt đã chặn cửa sổ pop-up. Vui lòng cho phép pop-up để mở đồ thị trên màn hình thứ hai.'
+          : 'Browser blocked pop-up window. Please allow pop-ups to open oscilloscope on secondary monitor.'
+      );
       return;
     }
 
-    popout.document.title = language === 'vi' ? 'RoboCAD 3D • Multi-Physics Telemetry Oscilloscope (Đa Màn Hình)' : 'RoboCAD 3D • Multi-Physics Telemetry Oscilloscope (Pop-out Window)';
+    popout.document.title = isVi
+      ? 'RoboCAD 3D • Multi-Physics Telemetry Oscilloscope (Đa Màn Hình)'
+      : 'RoboCAD 3D • Multi-Physics Telemetry Oscilloscope (Pop-out Window)';
 
     // Copy all parent stylesheets into child window for full Tailwind support
     document.querySelectorAll('link[rel="stylesheet"], style').forEach((node) => {
       popout.document.head.appendChild(node.cloneNode(true));
     });
 
-    // Dark background container
-    popout.document.body.className = 'bg-slate-950 text-slate-100 font-sans select-none overflow-hidden m-0 p-0';
+    // Theme-sensitive background container
+    popout.document.body.className = isLight
+      ? 'bg-slate-50 text-slate-800 font-sans select-none overflow-hidden m-0 p-0'
+      : 'bg-slate-950 text-slate-100 font-sans select-none overflow-hidden m-0 p-0';
+
     const container = popout.document.createElement('div');
     container.id = 'popout-oscilloscope-root';
     container.className = 'w-full h-full';
@@ -119,7 +155,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
     popoutWindowRef.current = popout;
     setPopoutContainer(container);
     setIsPopoutActive(true);
-  }, []);
+  }, [isLight, isVi]);
 
   const handleClosePopout = useCallback(() => {
     if (popoutWindowRef.current && !popoutWindowRef.current.closed) {
@@ -192,8 +228,16 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
 
     if (!hasData) {
       return (
-        <div className="w-full h-48 flex items-center justify-center bg-slate-950/80 rounded-xl border border-slate-800 text-slate-500 font-mono text-xs">
-          {language === 'vi' ? 'Chưa có dữ liệu chuỗi thời gian. Hãy nhấn "Mô phỏng" hoặc "Phát quỹ đạo" để ghi nhận tín hiệu.' : 'No time-series data recorded. Press "Simulate" or "Play Trajectory" to capture waveforms.'}
+        <div
+          className={`w-full h-48 flex items-center justify-center rounded-xl border font-mono text-xs ${
+            isLight
+              ? 'bg-slate-50 border-slate-200 text-slate-500'
+              : 'bg-slate-950/80 border-slate-800 text-slate-500'
+          }`}
+        >
+          {isVi
+            ? 'Chưa có dữ liệu chuỗi thời gian. Hãy nhấn "Mô phỏng" hoặc "Phát quỹ đạo" để ghi nhận tín hiệu.'
+            : 'No time-series data recorded. Press "Simulate" or "Play Trajectory" to capture waveforms.'}
         </div>
       );
     }
@@ -283,23 +327,44 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
     ];
 
     return (
-      <div className="bg-slate-950/90 border border-slate-800 rounded-xl p-3 shadow-md flex flex-col mb-3">
+      <div
+        className={`border rounded-xl p-3 shadow-sm flex flex-col mb-3 transition-colors ${
+          isLight
+            ? 'bg-white border-slate-200 text-slate-800'
+            : 'bg-slate-950/90 border-slate-800 text-slate-100'
+        }`}
+      >
         <div className="flex items-center justify-between mb-1.5 px-2">
           <div className="flex items-center space-x-2">
-            <span className="text-xs font-mono font-bold text-slate-200">{title}</span>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+            <span
+              className={`text-xs font-bold ${
+                isLight ? 'text-slate-900 font-serif' : 'text-slate-200 font-mono'
+              }`}
+            >
+              {title}
+            </span>
+            <span
+              className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+                isLight ? 'bg-slate-100 text-slate-700 border-slate-300' : 'bg-slate-800 text-slate-400 border-slate-700'
+              }`}
+            >
               {unit}
             </span>
           </div>
 
           <div className="flex items-center space-x-3 text-[11px] font-mono">
             {selectedJoint !== 'all' ? (
-              <span className="text-sky-300 font-bold">
-                J{selectedJoint + 1} hiện thời: {extractValues(samples[Math.min(samples.length - 1, Math.floor((currentTime / tMax) * (samples.length - 1)))], selectedJoint)?.toFixed(3)} {unit}
+              <span className={`font-bold ${isLight ? 'text-blue-700' : 'text-sky-300'}`}>
+                {isVi ? `J${selectedJoint + 1} hiện thời:` : `Current J${selectedJoint + 1}:`}{' '}
+                {extractValues(
+                  samples[Math.min(samples.length - 1, Math.floor((currentTime / tMax) * (samples.length - 1)))],
+                  selectedJoint
+                )?.toFixed(3)}{' '}
+                {unit}
               </span>
             ) : (
-              <span className="text-slate-400">
-                Hiển thị tất cả 6 khớp
+              <span className={isLight ? 'text-slate-500' : 'text-slate-400'}>
+                {isVi ? `Hiển thị tất cả ${dof} khớp` : `Displaying all ${dof} joints`}
               </span>
             )}
           </div>
@@ -307,7 +372,9 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
 
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          className="w-full h-auto select-none block cursor-crosshair rounded-lg overflow-hidden bg-[#060810]"
+          className={`w-full h-auto select-none block cursor-crosshair rounded-lg overflow-hidden border ${
+            isLight ? 'bg-white border-slate-200' : 'bg-[#060810] border-slate-800'
+          }`}
           onClick={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
@@ -327,16 +394,52 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
           onMouseLeave={() => setHoverTime(null)}
         >
           {/* Plot Background */}
-          <rect x={padL} y={padT} width={plotW} height={plotH} fill="#070a13" />
+          <rect
+            x={padL}
+            y={padT}
+            width={plotW}
+            height={plotH}
+            fill={isLight ? '#ffffff' : '#070a13'}
+            stroke={isLight ? '#cbd5e1' : 'none'}
+            strokeWidth={isLight ? '1' : '0'}
+          />
 
           {/* Grid lines */}
-          <line x1={padL} y1={padT} x2={padL + plotW} y2={padT} stroke="#1e293b" strokeDasharray="3 3" />
-          <line x1={padL} y1={padT + plotH / 2} x2={padL + plotW} y2={padT + plotH / 2} stroke="#1e293b" strokeDasharray="3 3" />
-          <line x1={padL} y1={padT + plotH} x2={padL + plotW} y2={padT + plotH} stroke="#1e293b" strokeDasharray="3 3" />
+          <line
+            x1={padL}
+            y1={padT}
+            x2={padL + plotW}
+            y2={padT}
+            stroke={isLight ? '#e2e8f0' : '#1e293b'}
+            strokeDasharray="2 3"
+          />
+          <line
+            x1={padL}
+            y1={padT + plotH / 2}
+            x2={padL + plotW}
+            y2={padT + plotH / 2}
+            stroke={isLight ? '#e2e8f0' : '#1e293b'}
+            strokeDasharray="2 3"
+          />
+          <line
+            x1={padL}
+            y1={padT + plotH}
+            x2={padL + plotW}
+            y2={padT + plotH}
+            stroke={isLight ? '#e2e8f0' : '#1e293b'}
+            strokeDasharray="2 3"
+          />
 
           {/* Zero baseline */}
           {zeroY >= padT && zeroY <= padT + plotH && (
-            <line x1={padL} y1={zeroY} x2={padL + plotW} y2={zeroY} stroke="#334155" strokeWidth="1.2" />
+            <line
+              x1={padL}
+              y1={zeroY}
+              x2={padL + plotW}
+              y2={zeroY}
+              stroke={isLight ? '#475569' : '#334155'}
+              strokeWidth="1.2"
+            />
           )}
 
           {/* Reference line */}
@@ -357,7 +460,8 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
                 textAnchor="end"
                 fill={referenceLine.color}
                 fontSize="9"
-                fontFamily="monospace"
+                fontFamily={isLight ? "'Times New Roman', Times, serif" : 'monospace'}
+                fontWeight="bold"
               >
                 {referenceLine.label} ({referenceLine.val})
               </text>
@@ -371,8 +475,8 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
               y={padT}
               width={Math.max(0, getX(Math.min(tMax, 7.5)) - getX(3.5))}
               height={plotH}
-              fill="#ffffff"
-              opacity="0.04"
+              fill={isLight ? '#000000' : '#ffffff'}
+              opacity={isLight ? '0.03' : '0.04'}
             />
           )}
 
@@ -383,7 +487,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
               d={line.path}
               fill="none"
               stroke={line.color}
-              strokeWidth="1.8"
+              strokeWidth="2.0"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
@@ -395,7 +499,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
             y1={padT}
             x2={cursorX}
             y2={padT + plotH}
-            stroke="#ef4444"
+            stroke="#dc2626"
             strokeWidth="1.8"
             strokeDasharray="4 2"
           />
@@ -407,10 +511,10 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
               y1={padT}
               x2={getX(hoverTime)}
               y2={padT + plotH}
-              stroke="#38bdf8"
+              stroke="#0284c7"
               strokeWidth="1.0"
               strokeDasharray="2 2"
-              opacity="0.7"
+              opacity="0.8"
             />
           )}
 
@@ -424,9 +528,10 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
                   x={padL - 8}
                   y={yPos + 3.5}
                   textAnchor="end"
-                  fill="#64748b"
+                  fill={isLight ? '#0f172a' : '#64748b'}
                   fontSize="9"
-                  fontFamily="monospace"
+                  fontFamily={isLight ? "'Times New Roman', Times, serif" : 'monospace'}
+                  fontWeight={isLight ? '600' : 'normal'}
                 >
                   {val.toFixed(Math.abs(val) < 1 ? 2 : 1)}
                 </text>
@@ -438,9 +543,9 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
             x={padL - 10}
             y={padT - 8}
             textAnchor="start"
-            fill="#94a3b8"
+            fill={isLight ? '#0f172a' : '#94a3b8'}
             fontSize="9.5"
-            fontFamily="monospace"
+            fontFamily={isLight ? "'Times New Roman', Times, serif" : 'monospace'}
             fontWeight="bold"
           >
             {yLabel}
@@ -450,11 +555,14 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
             x={padL + plotW}
             y={padT + plotH + 18}
             textAnchor="end"
-            fill="#64748b"
+            fill={isLight ? '#0f172a' : '#64748b'}
             fontSize="9"
-            fontFamily="monospace"
+            fontFamily={isLight ? "'Times New Roman', Times, serif" : 'monospace'}
+            fontWeight={isLight ? '600' : 'normal'}
           >
-            Thời gian t [s] (Tổng: {tMax.toFixed(2)}s)
+            {isVi
+              ? `Thời gian t [s] (Tổng: ${tMax.toFixed(2)}s)`
+              : `Time t [s] (Total: ${tMax.toFixed(2)}s)`}
           </text>
         </svg>
       </div>
@@ -463,24 +571,40 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
 
   // Content Body of the Oscilloscope
   const dialogContent = (
-    <div className="flex flex-col h-full bg-slate-950 text-slate-100 select-none overflow-hidden border border-slate-800 rounded-2xl shadow-2xl">
+    <div
+      className={`flex flex-col h-full select-none overflow-hidden border rounded-2xl shadow-2xl transition-colors ${
+        isLight ? 'bg-white text-slate-800 border-slate-300' : 'bg-slate-950 text-slate-100 border-slate-800'
+      }`}
+    >
       {/* Top Header Bar */}
-      <div className="h-13 px-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0">
+      <div
+        className={`h-13 px-4 border-b flex items-center justify-between shrink-0 ${
+          isLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-slate-800'
+        }`}
+      >
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-lg bg-sky-500/20 border border-sky-400/30 flex items-center justify-center text-sky-400 shadow-sm">
+          <div className="w-8 h-8 rounded-lg bg-sky-500/20 border border-sky-400/30 flex items-center justify-center text-sky-500 shadow-sm">
             <Activity className="w-4 h-4" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <span className="text-sm font-bold text-slate-100">
-                {language === 'vi' ? 'Bộ Dao Động Ký & Phân Tích Vật Lý Đa Miền' : 'Multi-Physics Telemetry & Oscilloscope Studio'}
+              <span className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
+                {isVi ? 'Bộ Dao Động Ký & Phân Tích Vật Lý Đa Miền' : 'Multi-Physics Telemetry & Oscilloscope Studio'}
               </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold">
+              <span
+                className={`text-[10px] font-mono px-2 py-0.5 rounded-full border font-semibold ${
+                  isLight
+                    ? 'bg-purple-100 text-purple-800 border-purple-300'
+                    : 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                }`}
+              >
                 Multi-Physics Scope (500 Hz RK4 + 10 kHz FOC)
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">
-              {language === 'vi' ? 'Quan sát thời gian thực: Động học, Mô-men RNE, Dòng điện Stator Iq, Điện áp Bus DC & Nhiệt độ Biến tần' : 'Real-time observation: Kinematics, RNE Torques, Stator Current Iq, DC-Bus Voltage & Inverter Dynamics'}
+            <p className={`text-[11px] ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+              {isVi
+                ? 'Quan sát thời gian thực: Động học, Mô-men RNE, Dòng điện Stator Iq, Điện áp Bus DC & Nhiệt độ Biến tần'
+                : 'Real-time telemetry: Kinematics, RNE Torques, Stator Current Iq, DC-Bus Voltage & Inverter Thermal Dynamics'}
             </p>
           </div>
         </div>
@@ -491,28 +615,52 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
           {!isPopoutActive ? (
             <button
               onClick={handleOpenPopout}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/30 text-xs font-mono font-medium transition shadow-sm"
-              title={language === 'vi' ? 'Mở cửa sổ đồ thị rời ra màn hình thứ hai (Multi-Monitor Pop-out)' : 'Pop-out to separate window for multi-monitor inspection'}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono font-medium transition shadow-sm ${
+                isLight
+                  ? 'bg-sky-50 hover:bg-sky-100 text-sky-700 border-sky-300'
+                  : 'bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border-sky-500/30'
+              }`}
+              title={
+                isVi
+                  ? 'Mở cửa sổ đồ thị rời ra màn hình thứ hai (Multi-Monitor Pop-out)'
+                  : 'Pop-out to separate window for multi-monitor inspection'
+              }
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>{language === 'vi' ? 'Mở Cửa Sổ Rời (Đa Màn Hình)' : 'Pop-out Window'}</span>
+              <span>{isVi ? 'Mở Cửa Sổ Rời (Đa Màn Hình)' : 'Pop-out Window'}</span>
             </button>
           ) : (
             <button
               onClick={handleClosePopout}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-medium transition shadow-sm"
-              title={language === 'vi' ? 'Thu về cửa sổ chính' : 'Dock back to main window'}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono font-medium transition shadow-sm ${
+                isLight
+                  ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300'
+                  : 'bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border-emerald-500/30'
+              }`}
+              title={isVi ? 'Thu về cửa sổ chính' : 'Dock back to main window'}
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>{language === 'vi' ? 'Gắn lại Cửa Sổ Chính' : 'Dock to Main'}</span>
+              <span>{isVi ? 'Gắn lại Cửa Sổ Chính' : 'Dock to Main'}</span>
             </button>
           )}
 
           {/* Maximize Toggle */}
           <button
             onClick={() => setIsMaximized(!isMaximized)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
-            title={isMaximized ? 'Thu nhỏ kích thước' : 'Phóng to toàn màn hình'}
+            className={`p-1.5 rounded-lg transition ${
+              isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            }`}
+            title={
+              isMaximized
+                ? isVi
+                  ? 'Thu nhỏ kích thước'
+                  : 'Restore size'
+                : isVi
+                ? 'Phóng to toàn màn hình'
+                : 'Maximize window'
+            }
           >
             {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
@@ -520,7 +668,11 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
           {/* Close Dialog */}
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition"
+            className={`p-1.5 rounded-lg transition ${
+              isLight
+                ? 'text-slate-600 hover:text-rose-600 hover:bg-rose-100'
+                : 'text-slate-400 hover:text-rose-400 hover:bg-rose-500/10'
+            }`}
             title={t.common.close}
           >
             <X className="w-4 h-4" />
@@ -529,54 +681,74 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
       </div>
 
       {/* Navigation Tabs & Filter Bar */}
-      <div className="px-4 py-2 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between text-xs font-mono shrink-0 gap-3">
+      <div
+        className={`px-4 py-2 border-b flex items-center justify-between text-xs font-mono shrink-0 gap-3 ${
+          isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/80 border-slate-800'
+        }`}
+      >
         {/* Category Tabs */}
         <div className="flex items-center space-x-1.5 overflow-x-auto">
           <button
             onClick={() => setActiveTab('motors')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition ${
               activeTab === 'motors'
-                ? 'bg-purple-600/30 text-purple-200 border border-purple-500 font-bold shadow-sm'
+                ? isLight
+                  ? 'bg-purple-100 text-purple-900 border border-purple-400 font-bold shadow-sm'
+                  : 'bg-purple-600/30 text-purple-200 border border-purple-500 font-bold shadow-sm'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
             }`}
           >
-            <Cpu className="w-3.5 h-3.5 text-purple-400" />
-            <span>{language === 'vi' ? 'Động Cơ & Dòng Điện (I_q, RPM, P)' : 'Motor Currents & Power (I_q, RPM, P)'}</span>
+            <Cpu className="w-3.5 h-3.5 text-purple-500" />
+            <span>{isVi ? 'Động Cơ & Dòng Điện (I_q, RPM, P)' : 'Motor Currents & Power (I_q, RPM, P)'}</span>
           </button>
 
           <button
             onClick={() => setActiveTab('converter')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition ${
               activeTab === 'converter'
-                ? 'bg-amber-600/30 text-amber-200 border border-amber-500 font-bold shadow-sm'
+                ? isLight
+                  ? 'bg-amber-100 text-amber-900 border border-amber-400 font-bold shadow-sm'
+                  : 'bg-amber-600/30 text-amber-200 border border-amber-500 font-bold shadow-sm'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
             }`}
           >
-            <Zap className="w-3.5 h-3.5 text-amber-400" />
-            <span>Biến Tần & Bus DC (V_dc, T_j, P_net)</span>
+            <Zap className="w-3.5 h-3.5 text-amber-500" />
+            <span>{isVi ? 'Biến Tần & Bus DC (V_dc, T_j, P_net)' : 'Inverter & DC Bus (V_dc, T_j, P_net)'}</span>
           </button>
 
           <button
             onClick={() => setActiveTab('torques')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition ${
               activeTab === 'torques'
-                ? 'bg-sky-600/30 text-sky-200 border border-sky-500 font-bold shadow-sm'
+                ? isLight
+                  ? 'bg-sky-100 text-sky-900 border border-sky-400 font-bold shadow-sm'
+                  : 'bg-sky-600/30 text-sky-200 border border-sky-500 font-bold shadow-sm'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
             }`}
           >
-            <Gauge className="w-3.5 h-3.5 text-sky-400" />
-            <span>Mô-men Khớp (τ_act, τ_g, τ_inert)</span>
+            <Gauge className="w-3.5 h-3.5 text-sky-500" />
+            <span>{isVi ? 'Mô-men Khớp (τ_act, τ_g, τ_inert)' : 'Joint Torques (τ_act, τ_g, τ_inert)'}</span>
           </button>
 
           <button
             onClick={() => setActiveTab('kinematics')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition ${
               activeTab === 'kinematics'
-                ? 'bg-emerald-600/30 text-emerald-200 border border-emerald-500 font-bold shadow-sm'
+                ? isLight
+                  ? 'bg-emerald-100 text-emerald-900 border border-emerald-400 font-bold shadow-sm'
+                  : 'bg-emerald-600/30 text-emerald-200 border border-emerald-500 font-bold shadow-sm'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
             }`}
           >
-            <Activity className="w-3.5 h-3.5 text-emerald-400" />
+            <Activity className="w-3.5 h-3.5 text-emerald-500" />
             <span>{isVi ? 'Động Học (Góc q, Vận tốc, Gia tốc)' : 'Kinematics (Position q, Velocity, Accel)'}</span>
           </button>
 
@@ -584,27 +756,37 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
             onClick={() => setActiveTab('errors')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition ${
               activeTab === 'errors'
-                ? 'bg-rose-600/30 text-rose-200 border border-rose-500 font-bold shadow-sm'
+                ? isLight
+                  ? 'bg-rose-100 text-rose-900 border border-rose-400 font-bold shadow-sm'
+                  : 'bg-rose-600/30 text-rose-200 border border-rose-500 font-bold shadow-sm'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
             }`}
           >
-            <Layers className="w-3.5 h-3.5 text-rose-400" />
-            <span>Sai Số Bám Quỹ Đạo e(t)</span>
+            <Layers className="w-3.5 h-3.5 text-rose-500" />
+            <span>{isVi ? 'Sai Số Bám Quỹ Đạo e(t)' : 'Trajectory Tracking Errors e(t)'}</span>
           </button>
         </div>
 
         {/* Joint Selector Pills */}
         <div className="flex items-center space-x-1 shrink-0">
-          <span className="text-[10px] text-slate-500 mr-1 hidden sm:inline">Khớp:</span>
+          <span className={`text-[10px] mr-1 hidden sm:inline ${isLight ? 'text-slate-600' : 'text-slate-500'}`}>
+            {isVi ? 'Khớp:' : 'Joint:'}
+          </span>
           <button
             onClick={() => setSelectedJoint('all')}
             className={`px-2 py-0.5 rounded text-[11px] transition ${
               selectedJoint === 'all'
-                ? 'bg-slate-700 text-white font-bold border border-slate-500'
+                ? isLight
+                  ? 'bg-slate-300 text-slate-900 font-bold border border-slate-400'
+                  : 'bg-slate-700 text-white font-bold border border-slate-500'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
             }`}
           >
-            Tất cả
+            {isVi ? 'Tất cả' : 'All'}
           </button>
           {Array.from({ length: dof }).map((_, j) => (
             <button
@@ -614,7 +796,13 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
                 borderColor: selectedJoint === j ? jointColors[j % jointColors.length] : 'transparent',
               }}
               className={`px-2 py-0.5 rounded border text-[11px] transition ${
-                selectedJoint === j ? 'bg-slate-800 font-bold' : 'text-slate-400 hover:text-slate-200'
+                selectedJoint === j
+                  ? isLight
+                    ? 'bg-slate-200 font-bold'
+                    : 'bg-slate-800 font-bold'
+                  : isLight
+                  ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               <span style={{ color: jointColors[j % jointColors.length] }}>J{j + 1}</span>
@@ -628,34 +816,48 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
         {/* TAB 1: MOTORS (DÒNG ĐIỆN VÀ TRUYỀN ĐỘNG ĐỘNG CƠ) */}
         {activeTab === 'motors' && (
           <div className="space-y-4">
-            <div className="p-3 bg-purple-950/20 border border-purple-500/20 rounded-xl flex items-center justify-between text-xs text-purple-200 font-mono">
+            <div
+              className={`p-3 rounded-xl flex items-center justify-between text-xs font-mono border ${
+                isLight
+                  ? 'bg-purple-50 border-purple-200 text-purple-900'
+                  : 'bg-purple-950/20 border-purple-500/20 text-purple-200'
+              }`}
+            >
               <div className="flex items-center space-x-2">
-                <Cpu className="w-4 h-4 text-purple-400 shrink-0" />
+                <Cpu className="w-4 h-4 text-purple-500 shrink-0" />
                 <span>
-                  Đặc tính dòng điện động cơ PMSM FOC: Dòng Iq sinh mô-men trục, tốc độ RPM và phân bố công suất điện/cơ qua từng khớp.
+                  {isVi
+                    ? 'Đặc tính dòng điện động cơ PMSM FOC: Dòng Iq sinh mô-men trục, tốc độ RPM và phân bố công suất điện/cơ qua từng khớp.'
+                    : 'PMSM FOC Motor Dynamics: Torque-producing Iq current, rotor mechanical speed, and power distribution across joints.'}
                 </span>
               </div>
-              <span className="text-[10px] text-purple-400">
-                Phân cỡ: J1-J2 ILM 70x18 | J3 ILM 70x10 | J4-J6 ILM 38
+              <span className={`text-[10px] ${isLight ? 'text-purple-700' : 'text-purple-400'}`}>
+                {isVi
+                  ? 'Phân cỡ: J1-J2 ILM 70x18 | J3 ILM 70x10 | J4-J6 ILM 38'
+                  : 'Sizing: J1-J2 ILM 70x18 | J3 ILM 70x10 | J4-J6 ILM 38'}
               </span>
             </div>
 
             {renderSVGChart(
-              isVi ? 'Dòng điện Pha Stator I_q(t) [A] (Dòng tạo mô-men từ)' : 'Stator Phase Current I_q(t) [A] (Torque Producing Current)',
+              isVi
+                ? 'Dòng điện Pha Stator I_q(t) [A] (Dòng tạo mô-men từ)'
+                : 'Stator Phase Current I_q(t) [A] (Torque-Producing Current)',
               'A',
               'I_q [A]',
               (s, j) => s.motorStates?.[j]?.currentA || (s.tau?.[j] ? s.tau[j] / 12.0 : 0)
             )}
 
             {renderSVGChart(
-              'Tốc độ Cơ học Rotor Động cơ [RPM]',
+              isVi ? 'Tốc độ Cơ học Rotor Động cơ [RPM]' : 'Motor Rotor Mechanical Speed [RPM]',
               'RPM',
               'Speed [RPM]',
               (s, j) => s.motorStates?.[j]?.rotorSpeedRpm || ((s.qdDeg?.[j] || 0) * (100 / 6))
             )}
 
             {renderSVGChart(
-              'Công suất Điện Tiêu thụ Động cơ P_elec [W]',
+              isVi
+                ? 'Công suất Điện Tiêu thụ Động cơ P_elec [W]'
+                : 'Motor Electrical Power Consumption P_elec [W]',
               'W',
               'Power [W]',
               (s, j) => s.motorStates?.[j]?.powerElectricalW || 0
@@ -666,20 +868,32 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
         {/* TAB 2: POWER CONVERTER & SHARED DC BUS */}
         {activeTab === 'converter' && (
           <div className="space-y-4">
-            <div className="p-3 bg-amber-950/20 border border-amber-500/20 rounded-xl flex items-center justify-between text-xs text-amber-200 font-mono">
+            <div
+              className={`p-3 rounded-xl flex items-center justify-between text-xs font-mono border ${
+                isLight
+                  ? 'bg-amber-50 border-amber-200 text-amber-900'
+                  : 'bg-amber-950/20 border-amber-500/20 text-amber-200'
+              }`}
+            >
               <div className="flex items-center space-x-2">
-                <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+                <Zap className="w-4 h-4 text-amber-500 shrink-0" />
                 <span>
-                  Động thái Điện tử Công suất Bus DC 48V: Sụt áp khi tăng tốc mang tải, dâng áp khi hãm tái sinh & nhiệt độ mối nối IGBT/MOSFET.
+                  {isVi
+                    ? 'Động thái Điện tử Công suất Bus DC 48V: Sụt áp khi tăng tốc mang tải, dâng áp khi hãm tái sinh & nhiệt độ mối nối IGBT/MOSFET.'
+                    : '48V DC-Bus Power Electronics: Voltage sag during acceleration, regenerative boost & IGBT/MOSFET junction temperature.'}
                 </span>
               </div>
-              <span className="text-[10px] text-amber-400">
-                Bộ xả hãm Chopper: 4.7 Ω (Kích hoạt khi V_dc &gt; 56V)
+              <span className={`text-[10px] ${isLight ? 'text-amber-700' : 'text-amber-400'}`}>
+                {isVi
+                  ? 'Bộ xả hãm Chopper: 4.7 Ω (Kích hoạt khi V_dc > 56V)'
+                  : 'Braking Chopper: 4.7 Ω (Fires when V_dc > 56V)'}
               </span>
             </div>
 
             {renderSVGChart(
-              isVi ? 'Điện áp Bus DC Dùng chung V_dc(t) [V] (Tụ bù 4700 µF)' : 'Shared DC-Bus Voltage V_dc(t) [V] (4700 µF Cap Bank)',
+              isVi
+                ? 'Điện áp Bus DC Dùng chung V_dc(t) [V] (Tụ bù 4700 µF)'
+                : 'Shared DC-Bus Voltage V_dc(t) [V] (4700 µF Cap Bank)',
               'V',
               'V_dc [V]',
               (s) => s.dcBusState?.voltageV || 48.0,
@@ -688,18 +902,22 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
             )}
 
             {renderSVGChart(
-              'Công suất Toàn hệ thống Inverter & Hãm tái sinh [W]',
+              isVi
+                ? 'Công suất Toàn hệ thống Inverter & Hãm tái sinh [W]'
+                : 'Total Inverter System & Regenerative Braking Power [W]',
               'W',
               'Power [W]',
               (s) => s.dcBusState?.totalPowerW || 0
             )}
 
             {renderSVGChart(
-              'Nhiệt độ Mối nối Bán dẫn Inverter T_j [°C] (Trục vai J2 mang tải)',
+              isVi
+                ? 'Nhiệt độ Mối nối Bán dẫn Inverter T_j [°C] (Trục vai J2 mang tải)'
+                : 'Inverter Semiconductor Junction Temp T_j [°C] (Loaded Shoulder J2)',
               '°C',
               'Temp [°C]',
               (s, j) => s.dcBusState?.axisStates?.[j]?.junctionTemperatureC || (45.0 + ((s.tau?.[j] || 0) ** 2) * 0.002),
-              { val: 85.0, label: 'Ngưỡng Cảnh báo 85°C', color: '#ef4444' }
+              { val: 85.0, label: isVi ? 'Ngưỡng Cảnh báo 85°C' : 'Warning Threshold 85°C', color: '#ef4444' }
             )}
           </div>
         )}
@@ -707,34 +925,42 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
         {/* TAB 3: TORQUES & DYNAMICS */}
         {activeTab === 'torques' && (
           <div className="space-y-4">
-            <div className="p-3 bg-sky-950/20 border border-sky-500/20 rounded-xl flex items-center justify-between text-xs text-sky-200 font-mono">
+            <div
+              className={`p-3 rounded-xl flex items-center justify-between text-xs font-mono border ${
+                isLight
+                  ? 'bg-sky-50 border-sky-200 text-sky-900'
+                  : 'bg-sky-950/20 border-sky-500/20 text-sky-200'
+              }`}
+            >
               <div className="flex items-center space-x-2">
-                <Gauge className="w-4 h-4 text-sky-400 shrink-0" />
+                <Gauge className="w-4 h-4 text-sky-500 shrink-0" />
                 <span>
-                  Phân rã Mô-men động học RNE: Mô-men tác động thực tế τ_act đối chiếu với thành phần trọng trường τ_g và quán tính τ_inert.
+                  {isVi
+                    ? 'Phân rã Mô-men động học RNE: Mô-men tác động thực tế τ_act đối chiếu với thành phần trọng trường τ_g và quán tính τ_inert.'
+                    : 'RNE Dynamic Torque Decomposition: Actuated torque τ_act compared against gravity compensation g(q) and inertial acceleration M(q)·qdd.'}
                 </span>
               </div>
-              <span className="text-[10px] text-sky-400">
-                Bao gồm quán tính quy đổi rotor N^2*J_m
+              <span className={`text-[10px] ${isLight ? 'text-sky-700' : 'text-sky-400'}`}>
+                {isVi ? 'Bao gồm quán tính quy đổi rotor N^2*J_m' : 'Includes reflected rotor inertia N²·J_m'}
               </span>
             </div>
 
             {renderSVGChart(
-              'Mô-men Điều khiển Trục Khớp τ_act(t) [N·m]',
+              isVi ? 'Mô-men Điều khiển Trục Khớp τ_act(t) [N·m]' : 'Actuated Joint Dynamic Torques τ_act(t) [N·m]',
               'N·m',
               'Torque [N·m]',
               (s, j) => s.tau?.[j] || 0
             )}
 
             {renderSVGChart(
-              'Thành phần Trọng lực Bù trừ g_i(q) [N·m]',
+              isVi ? 'Thành phần Trọng lực Bù trừ g_i(q) [N·m]' : 'Gravity Compensation Component g_i(q) [N·m]',
               'N·m',
               'Gravity [N·m]',
               (s, j) => s.tauGravity?.[j] || 0
             )}
 
             {renderSVGChart(
-              'Thành phần Quán tính Gia tốc M_ij * qdd [N·m]',
+              isVi ? 'Thành phần Quán tính Gia tốc M_ij * qdd [N·m]' : 'Inertial Acceleration Component M_ij · d²q/dt² [N·m]',
               'N·m',
               'Inertia [N·m]',
               (s, j) => s.tauInertia?.[j] || 0
@@ -746,7 +972,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
         {activeTab === 'kinematics' && (
           <div className="space-y-4">
             {renderSVGChart(
-              'Góc Khớp q_i(t) [deg]',
+              isVi ? 'Góc Khớp q_i(t) [deg]' : 'Joint Position Angle q_i(t) [deg]',
               '°',
               'Angle [°]',
               (s, j) => s.qDeg?.[j] || 0
@@ -760,7 +986,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
             )}
 
             {renderSVGChart(
-              'Gia tốc Góc Khớp qddot_i(t) [deg/s²]',
+              isVi ? 'Gia tốc Góc Khớp qddot_i(t) [deg/s²]' : 'Joint Angular Acceleration d²q/dt² [deg/s²]',
               '°/s²',
               'Accel [°/s²]',
               (s, j) => s.qddDeg?.[j] || 0
@@ -771,24 +997,34 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
         {/* TAB 5: ERRORS */}
         {activeTab === 'errors' && (
           <div className="space-y-4">
-            <div className="p-3 bg-rose-950/20 border border-rose-500/20 rounded-xl flex items-center justify-between text-xs text-rose-200 font-mono">
+            <div
+              className={`p-3 rounded-xl flex items-center justify-between text-xs font-mono border ${
+                isLight
+                  ? 'bg-rose-50 border-rose-200 text-rose-900'
+                  : 'bg-rose-950/20 border-rose-500/20 text-rose-200'
+              }`}
+            >
               <div className="flex items-center space-x-2">
-                <Layers className="w-4 h-4 text-rose-400 shrink-0" />
+                <Layers className="w-4 h-4 text-rose-500 shrink-0" />
                 <span>
-                  Sai số bám quỹ đạo e_i(t) = q_des - q_act: Quan sát độ võng tĩnh khi mang tải 3.5 kg tại t ∈ [3.5s, 7.5s].
+                  {isVi
+                    ? 'Sai số bám quỹ đạo e_i(t) = q_des - q_act: Quan sát độ võng tĩnh khi mang tải 3.5 kg tại t ∈ [3.5s, 7.5s].'
+                    : 'Trajectory Tracking Error e_i(t) = q_des - q_act: Observe static deflection under 3.5 kg payload at t ∈ [3.5s, 7.5s].'}
                 </span>
               </div>
             </div>
 
             {renderSVGChart(
-              'Sai số Bám Vị trí Góc Khớp e(t) [deg]',
+              isVi ? 'Sai số Bám Vị trí Góc Khớp e(t) [deg]' : 'Joint Position Tracking Errors e(t) [deg]',
               '°',
               'Error [°]',
               (s, j) => s.errorDeg?.[j] || 0
             )}
 
             {renderSVGChart(
-              'Mặt Trượt / Biến Trạng Thái Suy Rộng s(t) = e_dot + λ*e',
+              isVi
+                ? 'Mặt Trượt / Biến Trạng Thái Suy Rộng s(t) = e_dot + λ*e'
+                : 'Sliding Surface / Generalized State s(t) = ė + λ·e [rad/s]',
               'rad/s',
               'Sliding [rad/s]',
               (s, j) => s.slidingSurface?.[j] || 0
@@ -798,7 +1034,11 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
       </div>
 
       {/* Synchronized Timeline Scrubber & Transport Footer */}
-      <div className="h-14 px-4 bg-slate-900 border-t border-slate-800 flex items-center justify-between shrink-0 gap-4">
+      <div
+        className={`h-14 px-4 border-t flex items-center justify-between shrink-0 gap-4 ${
+          isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-slate-100'
+        }`}
+      >
         {/* Play / Pause / Reset Transport */}
         <div className="flex items-center space-x-2 shrink-0">
           <button
@@ -816,12 +1056,12 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
             {isDynamicsRunning || playbackState.isPlaying ? (
               <>
                 <Pause className="w-3.5 h-3.5 fill-current" />
-                <span>Tạm dừng</span>
+                <span>{isVi ? 'Tạm dừng' : 'Pause'}</span>
               </>
             ) : (
               <>
                 <Play className="w-3.5 h-3.5 fill-current" />
-                <span>Mô phỏng</span>
+                <span>{isVi ? 'Mô phỏng' : 'Simulate'}</span>
               </>
             )}
           </button>
@@ -831,8 +1071,12 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
               if (activeWorkspaceMode === 'dynamics') resetDynamicsSimulation();
               else seekTrajectoryTime(0);
             }}
-            className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white border border-slate-700 transition"
-            title="Khôi phục trạng thái ban đầu"
+            className={`p-1.5 rounded-lg border transition ${
+              isLight
+                ? 'bg-white text-slate-700 hover:bg-slate-200 border-slate-300'
+                : 'bg-slate-800 text-slate-400 hover:text-white border-slate-700'
+            }`}
+            title={isVi ? 'Khôi phục trạng thái ban đầu' : 'Reset to initial state'}
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -840,7 +1084,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
 
         {/* Real-time Scrubber Slider */}
         <div className="flex-1 flex items-center space-x-3">
-          <span className="text-xs font-mono text-slate-400 shrink-0">
+          <span className={`text-xs font-mono shrink-0 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
             {currentTime.toFixed(2)}s / {totalDuration.toFixed(2)}s
           </span>
           <input
@@ -850,44 +1094,66 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
             step={0.01}
             value={currentTime}
             onChange={(e) => seekTrajectoryTime(parseFloat(e.target.value))}
-            className="flex-1 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-500"
+            className={`flex-1 h-1.5 rounded-lg appearance-none cursor-pointer ${
+              isLight ? 'bg-slate-200 accent-sky-600' : 'bg-slate-800 accent-sky-500'
+            }`}
           />
         </div>
 
         {/* Status Indicators */}
-        <div className="hidden md:flex items-center space-x-3 text-[11px] font-mono text-slate-400 shrink-0">
+        <div
+          className={`hidden md:flex items-center space-x-3 text-[11px] font-mono shrink-0 ${
+            isLight ? 'text-slate-600' : 'text-slate-400'
+          }`}
+        >
           <span className="flex items-center space-x-1">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>500 Hz RK4</span>
           </span>
           <span>•</span>
-          <span className="text-purple-300">FOC 10 kHz</span>
+          <span className={isLight ? 'text-purple-700 font-bold' : 'text-purple-300'}>FOC 10 kHz</span>
           <span>•</span>
-          <span className="text-amber-300">DC 48V</span>
+          <span className={isLight ? 'text-amber-700 font-bold' : 'text-amber-300'}>DC 48V</span>
         </div>
       </div>
     </div>
   );
 
   const mobileDialogContent = (
-    <div className="flex flex-col h-full bg-slate-950 text-slate-100 select-none overflow-hidden border border-slate-800 rounded-2xl shadow-2xl">
+    <div
+      className={`flex flex-col h-full select-none overflow-hidden border rounded-2xl shadow-2xl transition-colors ${
+        isLight ? 'bg-white text-slate-800 border-slate-300' : 'bg-slate-950 text-slate-100 border-slate-800'
+      }`}
+    >
       {/* Top Header Bar */}
-      <div className="h-14 px-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0">
+      <div
+        className={`h-14 px-4 border-b flex items-center justify-between shrink-0 ${
+          isLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-slate-800'
+        }`}
+      >
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-lg bg-sky-500/20 border border-sky-400/30 flex items-center justify-center text-sky-400 shadow-sm">
+          <div className="w-8 h-8 rounded-lg bg-sky-500/20 border border-sky-400/30 flex items-center justify-center text-sky-500 shadow-sm">
             <Activity className="w-4 h-4" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <span className="text-sm font-bold text-slate-100">
-                Bộ Dao Động Ký AMR & Hệ Đa Vật Lý AGV
+              <span className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
+                {isVi ? 'Bộ Dao Động Ký AMR & Hệ Đa Vật Lý AGV' : 'AMR & AGV Multi-Physics Telemetry Oscilloscope'}
               </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 font-semibold">
+              <span
+                className={`text-[10px] font-mono px-2 py-0.5 rounded-full border font-semibold ${
+                  isLight
+                    ? 'bg-sky-100 text-sky-800 border-sky-300'
+                    : 'bg-sky-500/20 text-sky-300 border-sky-500/30'
+                }`}
+              >
                 Multi-Physics Scope (20 kHz SPWM + Pacejka Tire + Dual Caster)
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">
-              {isVi ? 'Quan sát thời gian thực: Vận tốc Thân xe, Dual-PMSM dq, Lực kéo Lốp Pacejka, Tải trọng Pháp tuyến Fz, Bánh Caster & Tư thế 3D' : 'Real-time observation: Chassis Velocities, Dual-PMSM dq, Pacejka Traction, Dynamic Normal Loads Fz, Caster Dynamics & 3D Attitude'}
+            <p className={`text-[11px] ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+              {isVi
+                ? 'Quan sát thời gian thực: Vận tốc Thân xe, Dual-PMSM dq, Lực kéo Lốp Pacejka, Tải trọng Pháp tuyến Fz, Bánh Caster & Tư thế 3D'
+                : 'Real-time observation: Chassis Velocities, Dual-PMSM dq, Pacejka Traction, Dynamic Normal Loads Fz, Caster Dynamics & 3D Attitude'}
             </p>
           </div>
         </div>
@@ -897,28 +1163,52 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
           {!isPopoutActive ? (
             <button
               onClick={handleOpenPopout}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/30 text-xs font-mono font-medium transition shadow-sm"
-              title={language === 'vi' ? 'Mở cửa sổ đồ thị rời ra màn hình thứ hai (Multi-Monitor Pop-out)' : 'Pop-out to separate window for multi-monitor inspection'}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono font-medium transition shadow-sm ${
+                isLight
+                  ? 'bg-sky-50 hover:bg-sky-100 text-sky-700 border-sky-300'
+                  : 'bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border-sky-500/30'
+              }`}
+              title={
+                isVi
+                  ? 'Mở cửa sổ đồ thị rời ra màn hình thứ hai (Multi-Monitor Pop-out)'
+                  : 'Pop-out to separate window for multi-monitor inspection'
+              }
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>{language === 'vi' ? 'Mở Cửa Sổ Rời (Đa Màn Hình)' : 'Pop-out Window'}</span>
+              <span>{isVi ? 'Mở Cửa Sổ Rời (Đa Màn Hình)' : 'Pop-out Window'}</span>
             </button>
           ) : (
             <button
               onClick={handleClosePopout}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-medium transition shadow-sm"
-              title={language === 'vi' ? 'Thu về cửa sổ chính' : 'Dock back to main window'}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono font-medium transition shadow-sm ${
+                isLight
+                  ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300'
+                  : 'bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border-emerald-500/30'
+              }`}
+              title={isVi ? 'Thu về cửa sổ chính' : 'Dock back to main window'}
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>{language === 'vi' ? 'Gắn lại Cửa Sổ Chính' : 'Dock to Main'}</span>
+              <span>{isVi ? 'Gắn lại Cửa Sổ Chính' : 'Dock to Main'}</span>
             </button>
           )}
 
           {/* Maximize Toggle */}
           <button
             onClick={() => setIsMaximized(!isMaximized)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
-            title={isMaximized ? 'Thu nhỏ kích thước' : 'Phóng to toàn màn hình'}
+            className={`p-1.5 rounded-lg transition ${
+              isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            }`}
+            title={
+              isMaximized
+                ? isVi
+                  ? 'Thu nhỏ kích thước'
+                  : 'Restore size'
+                : isVi
+                ? 'Phóng to toàn màn hình'
+                : 'Maximize window'
+            }
           >
             {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
@@ -926,7 +1216,11 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
           {/* Close Dialog */}
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition"
+            className={`p-1.5 rounded-lg transition ${
+              isLight
+                ? 'text-slate-600 hover:text-rose-600 hover:bg-rose-100'
+                : 'text-slate-400 hover:text-rose-400 hover:bg-rose-500/10'
+            }`}
             title={t.common.close}
           >
             <X className="w-4 h-4" />
@@ -951,7 +1245,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
   // Normal In-App Modal / Dialog
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 transition-all ${
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 transition-all ${
         isMaximized ? 'p-0' : 'p-4 md:p-8'
       }`}
     >

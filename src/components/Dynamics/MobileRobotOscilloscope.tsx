@@ -1,5 +1,6 @@
 import { useTranslation } from '../../i18n';
 import React, { useState, useRef, useEffect } from 'react';
+import { useRobotStore } from '../../store/robotStore';
 import { useMobileRobotStore, AGVHistoryPoint } from '../../store/mobileRobotStore';
 import {
   Activity,
@@ -30,6 +31,8 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
     physicsFidelity,
     kdsIsPlaying,
   } = useMobileRobotStore();
+  const { uiTheme } = useRobotStore();
+  const isLight = uiTheme === 'light';
   const { t, language } = useTranslation();
   const isVi = language === 'vi';
 
@@ -115,10 +118,22 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
     const hoveredPt = hoverIdx !== null && history[hoverIdx] ? history[hoverIdx] : history[history.length - 1];
 
     return (
-      <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+      <div
+        className={`p-3 rounded-xl border space-y-2 transition-colors ${
+          isLight
+            ? 'bg-white border-slate-200 text-slate-800 shadow-sm'
+            : 'bg-slate-900/80 border-slate-800 text-slate-100'
+        }`}
+      >
         <div className="flex justify-between items-center text-xs">
           <div className="flex items-center space-x-2">
-            <span className="font-semibold text-slate-200">{title}</span>
+            <span
+              className={`font-semibold ${
+                isLight ? 'text-slate-900 font-serif font-bold' : 'text-slate-200'
+              }`}
+            >
+              {title}
+            </span>
           </div>
 
           {/* Trace Legend with current/hovered values */}
@@ -131,8 +146,8 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
                     className="w-2.5 h-1 rounded-full"
                     style={{ backgroundColor: tr.color }}
                   />
-                  <span className="text-slate-400">{tr.label}:</span>
-                  <span className="font-bold text-slate-100" style={{ color: tr.color }}>
+                  <span className={isLight ? 'text-slate-600' : 'text-slate-400'}>{tr.label}:</span>
+                  <span className="font-bold" style={{ color: tr.color }}>
                     {val.toFixed(2)} {tr.unit}
                   </span>
                 </div>
@@ -142,7 +157,11 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
         </div>
 
         {/* SVG Waveform Area */}
-        <div className="relative overflow-hidden rounded-lg bg-slate-950 border border-slate-850">
+        <div
+          className={`relative overflow-hidden rounded-lg border ${
+            isLight ? 'bg-white border-slate-200' : 'bg-slate-950 border-slate-850'
+          }`}
+        >
           <svg
             viewBox={`0 0 ${svgWidth} ${svgHeight}`}
             className="w-full h-auto select-none"
@@ -157,9 +176,30 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
             onMouseLeave={() => setHoverIdx(null)}
           >
             {/* Grid Lines */}
-            <line x1={padL} y1={padT} x2={padL + plotW} y2={padT} stroke="#1e293b" strokeDasharray="3 3" />
-            <line x1={padL} y1={padT + plotH * 0.5} x2={padL + plotW} y2={padT + plotH * 0.5} stroke="#334155" strokeDasharray="2 2" />
-            <line x1={padL} y1={padT + plotH} x2={padL + plotW} y2={padT + plotH} stroke="#1e293b" strokeDasharray="3 3" />
+            <line
+              x1={padL}
+              y1={padT}
+              x2={padL + plotW}
+              y2={padT}
+              stroke={isLight ? '#e2e8f0' : '#1e293b'}
+              strokeDasharray="2 3"
+            />
+            <line
+              x1={padL}
+              y1={padT + plotH * 0.5}
+              x2={padL + plotW}
+              y2={padT + plotH * 0.5}
+              stroke={isLight ? '#e2e8f0' : '#334155'}
+              strokeDasharray="2 2"
+            />
+            <line
+              x1={padL}
+              y1={padT + plotH}
+              x2={padL + plotW}
+              y2={padT + plotH}
+              stroke={isLight ? '#e2e8f0' : '#1e293b'}
+              strokeDasharray="2 3"
+            />
 
             {/* Zero Axis if in range */}
             {yMin < 0 && yMax > 0 && (
@@ -168,20 +208,44 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
                 y1={getY(0)}
                 x2={padL + plotW}
                 y2={getY(0)}
-                stroke="#475569"
+                stroke={isLight ? '#475569' : '#475569'}
                 strokeWidth="1.2"
                 strokeDasharray="4 4"
               />
             )}
 
             {/* Y Axis Tick Labels */}
-            <text x={padL - 6} y={padT + 4} fill="#64748b" fontSize="9" textAnchor="end" fontFamily="monospace">
+            <text
+              x={padL - 6}
+              y={padT + 4}
+              fill={isLight ? '#0f172a' : '#64748b'}
+              fontSize="9"
+              textAnchor="end"
+              fontFamily={isLight ? "'Times New Roman', Times, serif" : 'monospace'}
+              fontWeight={isLight ? '600' : 'normal'}
+            >
               {yMax.toFixed(1)}
             </text>
-            <text x={padL - 6} y={padT + plotH * 0.5 + 3} fill="#64748b" fontSize="9" textAnchor="end" fontFamily="monospace">
+            <text
+              x={padL - 6}
+              y={padT + plotH * 0.5 + 3}
+              fill={isLight ? '#0f172a' : '#64748b'}
+              fontSize="9"
+              textAnchor="end"
+              fontFamily={isLight ? "'Times New Roman', Times, serif" : 'monospace'}
+              fontWeight={isLight ? '600' : 'normal'}
+            >
               {((yMax + yMin) / 2).toFixed(1)}
             </text>
-            <text x={padL - 6} y={padT + plotH} fill="#64748b" fontSize="9" textAnchor="end" fontFamily="monospace">
+            <text
+              x={padL - 6}
+              y={padT + plotH}
+              fill={isLight ? '#0f172a' : '#64748b'}
+              fontSize="9"
+              textAnchor="end"
+              fontFamily={isLight ? "'Times New Roman', Times, serif" : 'monospace'}
+              fontWeight={isLight ? '600' : 'normal'}
+            >
               {yMin.toFixed(1)}
             </text>
 
@@ -205,7 +269,7 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
                   y1={padT}
                   x2={getX(hoveredPt.time)}
                   y2={padT + plotH}
-                  stroke="#38bdf8"
+                  stroke="#0284c7"
                   strokeWidth="1"
                   strokeDasharray="2 2"
                 />
@@ -219,10 +283,25 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
             )}
 
             {/* X-Axis Time Bounds */}
-            <text x={padL} y={svgHeight - 8} fill="#64748b" fontSize="9" fontFamily="monospace">
+            <text
+              x={padL}
+              y={svgHeight - 8}
+              fill={isLight ? '#0f172a' : '#64748b'}
+              fontSize="9"
+              fontFamily={isLight ? "'Times New Roman', Times, serif" : 'monospace'}
+              fontWeight={isLight ? '600' : 'normal'}
+            >
               t = {tMin.toFixed(1)}s
             </text>
-            <text x={padL + plotW} y={svgHeight - 8} fill="#64748b" fontSize="9" textAnchor="end" fontFamily="monospace">
+            <text
+              x={padL + plotW}
+              y={svgHeight - 8}
+              fill={isLight ? '#0f172a' : '#64748b'}
+              fontSize="9"
+              textAnchor="end"
+              fontFamily={isLight ? "'Times New Roman', Times, serif" : 'monospace'}
+              fontWeight={isLight ? '600' : 'normal'}
+            >
               t = {tMax.toFixed(1)}s (Δt = {tSpan.toFixed(1)}s)
             </text>
           </svg>
@@ -249,16 +328,18 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
   };
 
   return (
-    <div ref={containerRef} className="space-y-3 font-sans">
+    <div ref={containerRef} className={`space-y-3 font-sans transition-colors ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
       {/* Oscilloscope Header Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-slate-800">
+      <div className={`flex flex-wrap items-center justify-between gap-2 pb-1 border-b ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
         {/* Domain Tabs */}
-        <div className="flex items-center space-x-1 p-0.5 rounded-lg bg-slate-900 border border-slate-800">
+        <div className={`flex items-center space-x-1 p-0.5 rounded-lg border ${isLight ? 'bg-slate-100 border-slate-300' : 'bg-slate-900 border-slate-800'}`}>
           <button
             onClick={() => setActiveTab('tracking_kds')}
             className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition flex items-center space-x-1.5 ${
               activeTab === 'tracking_kds'
-                ? 'bg-teal-600 text-white shadow-sm'
+                ? 'bg-teal-600 text-white shadow-sm font-bold'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
             }`}
           >
@@ -270,7 +351,9 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
             onClick={() => setActiveTab('kinematics')}
             className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition flex items-center space-x-1.5 ${
               activeTab === 'kinematics'
-                ? 'bg-sky-600 text-white shadow-sm'
+                ? 'bg-sky-600 text-white shadow-sm font-bold'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
             }`}
           >
@@ -282,7 +365,9 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
             onClick={() => setActiveTab('pmsm')}
             className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition flex items-center space-x-1.5 ${
               activeTab === 'pmsm'
-                ? 'bg-amber-600 text-white shadow-sm'
+                ? 'bg-amber-600 text-white shadow-sm font-bold'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
             }`}
           >
@@ -294,7 +379,9 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
             onClick={() => setActiveTab('pacejka')}
             className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition flex items-center space-x-1.5 ${
               activeTab === 'pacejka'
-                ? 'bg-emerald-600 text-white shadow-sm'
+                ? 'bg-emerald-600 text-white shadow-sm font-bold'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
             }`}
           >
@@ -306,7 +393,9 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
             onClick={() => setActiveTab('chassis')}
             className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition flex items-center space-x-1.5 ${
               activeTab === 'chassis'
-                ? 'bg-purple-600 text-white shadow-sm'
+                ? 'bg-purple-600 text-white shadow-sm font-bold'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
             }`}
           >
@@ -318,7 +407,9 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
             onClick={() => setActiveTab('foc_ccc')}
             className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition flex items-center space-x-1.5 ${
               activeTab === 'foc_ccc'
-                ? 'bg-rose-600 text-white shadow-sm'
+                ? 'bg-rose-600 text-white shadow-sm font-bold'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
             }`}
           >
@@ -330,9 +421,9 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
         {/* Live Stream & Action Controls */}
         <div className="flex items-center space-x-2">
           {/* Physics Fidelity Badge */}
-          <div className="px-2 py-0.5 rounded text-[10px] font-mono border hidden sm:flex items-center space-x-1 bg-slate-900 border-slate-750 text-slate-300">
-            <span className="text-slate-500">{language === 'vi' ? 'Mô hình:' : 'Plant:'}</span>
-            <span className="text-sky-300 font-semibold">
+          <div className={`px-2 py-0.5 rounded text-[10px] font-mono border hidden sm:flex items-center space-x-1 ${isLight ? 'bg-slate-100 border-slate-300 text-slate-700' : 'bg-slate-900 border-slate-750 text-slate-300'}`}>
+            <span className={isLight ? 'text-slate-500' : 'text-slate-500'}>{language === 'vi' ? 'Mô hình:' : 'Plant:'}</span>
+            <span className={`${isLight ? 'text-blue-700 font-bold' : 'text-sky-300 font-semibold'}`}>
               {physicsFidelity === 'multiphysics' ? (language === 'vi' ? 'Đa Vật Lý 1µs' : 'Multi-Physics 1µs') : (language === 'vi' ? 'Động Học' : 'Ideal Kinematics')}
             </span>
           </div>
@@ -342,8 +433,8 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
             onClick={() => setIsLiveRecording(!isLiveRecording)}
             className={`px-2.5 py-1 rounded-lg border flex items-center space-x-1.5 text-[11px] font-mono cursor-pointer transition ${
               isLiveRecording
-                ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
-                : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                : 'bg-amber-500/10 text-amber-500 border-amber-500/30'
             }`}
             title={language === 'vi' ? 'Nhấn để Tạm dừng / Tiếp tục ghi sóng thời gian thực' : 'Toggle live telemetry recording / freeze'}
           >
@@ -354,7 +445,7 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
               </>
             ) : (
               <>
-                <Play className="w-3 h-3 text-amber-400 fill-current" />
+                <Play className="w-3 h-3 text-amber-500 fill-current" />
                 <span>{language === 'vi' ? 'ĐÃ DỪNG (FROZEN)' : 'FROZEN'}</span>
               </>
             )}
@@ -362,7 +453,11 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
 
           <button
             onClick={clearAgvHistory}
-            className="p-1.5 rounded-lg bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800 transition"
+            className={`p-1.5 rounded-lg border transition ${
+              isLight
+                ? 'bg-white text-slate-700 hover:bg-slate-100 border-slate-300'
+                : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border-slate-800'
+            }`}
             title={language === 'vi' ? 'Xóa bộ đệm sóng' : 'Clear buffer'}
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -370,10 +465,14 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
 
           <button
             onClick={handleDownloadCSV}
-            className="px-2.5 py-1 rounded-lg bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-800 flex items-center space-x-1 transition text-[11px]"
+            className={`px-2.5 py-1 rounded-lg border flex items-center space-x-1 transition text-[11px] ${
+              isLight
+                ? 'bg-white text-slate-700 hover:bg-slate-100 border-slate-300'
+                : 'bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-800'
+            }`}
             title={language === 'vi' ? 'Xuất dữ liệu sóng ra file CSV' : 'Export CSV'}
           >
-            <Download className="w-3.5 h-3.5 text-emerald-400" />
+            <Download className="w-3.5 h-3.5 text-emerald-500" />
             <span>{t.common.export} CSV</span>
           </button>
         </div>
