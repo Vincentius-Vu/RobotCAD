@@ -21,6 +21,7 @@ import {
   Sparkles,
   Zap,
   Maximize2,
+  ChevronDown,
 } from 'lucide-react';
 
 export type LineStyleType = 'solid' | 'dashed' | 'dotted' | 'dash-dot';
@@ -40,6 +41,17 @@ const DEFAULT_JOINT_COLORS = [
   '#ec4899', // J5: Pink
   '#f97316', // J6: Orange
   '#06b6d4', // J7: Cyan
+];
+
+// IEEE Transactions on Robotics / Nature standard high-contrast publication palette
+const ACADEMIC_JOINT_COLORS = [
+  '#1f77b4', // J1: Deep Academic Blue
+  '#d97706', // J2: Warm Amber / Ochre
+  '#059669', // J3: Emerald Green
+  '#7c3aed', // J4: Royal Purple
+  '#db2777', // J5: Crimson / Rose
+  '#ea580c', // J6: Rust Orange
+  '#0891b2', // J7: Dark Cyan
 ];
 
 const PRESET_COLOR_SWATCHES = [
@@ -75,7 +87,10 @@ export const MotionProfilePlots: React.FC = () => {
     dynamicsSettings,
     dynamicSamples,
     activeDynamicState,
+    uiTheme,
   } = useRobotStore();
+
+  const isLight = uiTheme === 'light';
 
   const [layoutMode, setLayoutMode] = useState<
     'subplots' | 'positions' | 'velocities' | 'accelerations' | 'phase-plane'
@@ -88,10 +103,11 @@ export const MotionProfilePlots: React.FC = () => {
   // Curve Styling State (Color, Linewidth, Linestyle, Visibility for each Joint)
   const [isStyleEditorOpen, setIsStyleEditorOpen] = useState(false);
   const [curveStyles, setCurveStyles] = useState<Record<number, JointCurveStyle>>(() => {
+    const palette = isLight ? ACADEMIC_JOINT_COLORS : DEFAULT_JOINT_COLORS;
     const initial: Record<number, JointCurveStyle> = {};
     for (let i = 0; i < 7; i++) {
       initial[i] = {
-        color: DEFAULT_JOINT_COLORS[i % DEFAULT_JOINT_COLORS.length],
+        color: palette[i % palette.length],
         lineWidth: 2.0,
         lineStyle: 'solid',
         visible: true,
@@ -99,6 +115,21 @@ export const MotionProfilePlots: React.FC = () => {
     }
     return initial;
   });
+
+  // Keep colors updated if user toggles between Light and Dark mode
+  React.useEffect(() => {
+    setCurveStyles((prev) => {
+      const palette = isLight ? ACADEMIC_JOINT_COLORS : DEFAULT_JOINT_COLORS;
+      const otherPalette = isLight ? DEFAULT_JOINT_COLORS : ACADEMIC_JOINT_COLORS;
+      const updated = { ...prev };
+      for (let i = 0; i < 7; i++) {
+        if (updated[i] && updated[i].color === otherPalette[i % otherPalette.length]) {
+          updated[i] = { ...updated[i], color: palette[i % palette.length] };
+        }
+      }
+      return updated;
+    });
+  }, [isLight]);
 
   // Hover state for synchronized crosshair
   const [hoverTime, setHoverTime] = useState<number | null>(null);
@@ -259,10 +290,25 @@ export const MotionProfilePlots: React.FC = () => {
 
   // Preset: Reset all to standard colors
   const resetToDefaultStyles = () => {
+    const palette = isLight ? ACADEMIC_JOINT_COLORS : DEFAULT_JOINT_COLORS;
     const res: Record<number, JointCurveStyle> = {};
     for (let i = 0; i < 7; i++) {
       res[i] = {
-        color: DEFAULT_JOINT_COLORS[i % DEFAULT_JOINT_COLORS.length],
+        color: palette[i % palette.length],
+        lineWidth: 2.0,
+        lineStyle: 'solid',
+        visible: true,
+      };
+    }
+    setCurveStyles(res);
+  };
+
+  // Preset: IEEE Academic High-Contrast Publication Standard
+  const applyAcademicPreset = () => {
+    const res: Record<number, JointCurveStyle> = {};
+    for (let i = 0; i < 7; i++) {
+      res[i] = {
+        color: ACADEMIC_JOINT_COLORS[i % ACADEMIC_JOINT_COLORS.length],
         lineWidth: 2.0,
         lineStyle: 'solid',
         visible: true,
@@ -275,7 +321,9 @@ export const MotionProfilePlots: React.FC = () => {
   const applyMonochromePreset = () => {
     const styles: LineStyleType[] = ['solid', 'dashed', 'dash-dot', 'dotted', 'solid', 'dashed', 'dotted'];
     const widths = [2.2, 2.0, 2.0, 2.2, 1.5, 1.5, 1.5];
-    const shades = ['#ffffff', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'];
+    const shades = isLight
+      ? ['#0f172a', '#334155', '#475569', '#64748b', '#1e293b', '#000000', '#4b5563']
+      : ['#ffffff', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155'];
     const res: Record<number, JointCurveStyle> = {};
     for (let i = 0; i < 7; i++) {
       res[i] = {
@@ -327,24 +375,41 @@ export const MotionProfilePlots: React.FC = () => {
     }
 
     return (
-      <div className="relative bg-slate-950/70 border border-slate-800/80 rounded-xl p-2.5 shadow-inner">
+      <div
+        className={`relative rounded-xl p-2.5 shadow-sm border transition-colors ${
+          isLight
+            ? 'bg-white border-slate-200 text-slate-800'
+            : 'bg-slate-950/70 border-slate-800/80 text-slate-200 shadow-inner'
+        }`}
+      >
         {/* Subplot Title Bar */}
         <div className="flex flex-wrap items-center justify-between gap-2 mb-1 px-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-mono font-bold text-slate-300">
-              {effectiveTitle} <span className="text-slate-500 font-normal">[{effectiveUnit}]</span>
+            <span
+              className={`text-[11px] font-bold ${
+                isLight ? 'text-slate-900 font-serif' : 'text-slate-300 font-mono'
+              }`}
+            >
+              {effectiveTitle}{' '}
+              <span className={`font-normal ${isLight ? 'text-slate-500' : 'text-slate-500'}`}>
+                [{effectiveUnit}]
+              </span>
             </span>
             {plotSource === 'tracking-compare' && mode === 'positions' && (
-              <span className="text-[9px] font-mono text-slate-400">
+              <span className={`text-[9px] font-mono ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                 (Nét đứt: Kế hoạch q_d | Nét liền: Thực tế q)
               </span>
             )}
 
             {/* Tracking Error Y-Lim & Autoscale Controls */}
             {isErrorPlot && (
-              <div className="flex items-center space-x-1 bg-slate-900 border border-slate-700/80 rounded-md px-1.5 py-0.5 text-[10px] font-mono shadow-sm">
-                <span className="text-slate-400 font-semibold flex items-center gap-1">
-                  <Maximize2 className="w-2.5 h-2.5 text-sky-400" />
+              <div
+                className={`flex items-center space-x-1 border rounded-md px-1.5 py-0.5 text-[10px] font-mono shadow-sm ${
+                  isLight ? 'bg-slate-100 border-slate-300' : 'bg-slate-900 border-slate-700/80'
+                }`}
+              >
+                <span className="text-slate-500 font-semibold flex items-center gap-1">
+                  <Maximize2 className="w-2.5 h-2.5 text-sky-500" />
                   Y-Lim:
                 </span>
 
@@ -453,16 +518,40 @@ export const MotionProfilePlots: React.FC = () => {
             </clipPath>
           </defs>
 
-          {/* Background Grid */}
-          <rect x={padL} y={padT} width={plotW} height={plotH} fill="#090d16" rx={4} />
+          {/* Background Grid: Pure White in Light mode */}
+          <rect
+            x={padL}
+            y={padT}
+            width={plotW}
+            height={plotH}
+            fill={isLight ? '#ffffff' : '#090d16'}
+            stroke={isLight ? '#cbd5e1' : 'none'}
+            strokeWidth={isLight ? '1' : '0'}
+            rx={4}
+          />
 
           {/* Horizontal Grid lines */}
           {yTicks.map((val, idx) => {
             const y = getY(val, bounds);
             return (
               <g key={idx}>
-                <line x1={padL} y1={y} x2={padL + plotW} y2={y} stroke="#1e293b" strokeDasharray="3 3" />
-                <text x={padL - 6} y={y + 3} textAnchor="end" fill="#64748b" fontSize="9" fontFamily="monospace">
+                <line
+                  x1={padL}
+                  y1={y}
+                  x2={padL + plotW}
+                  y2={y}
+                  stroke={isLight ? '#e2e8f0' : '#1e293b'}
+                  strokeDasharray="2 3"
+                />
+                <text
+                  x={padL - 6}
+                  y={y + 3}
+                  textAnchor="end"
+                  fill={isLight ? '#0f172a' : '#64748b'}
+                  fontSize="9"
+                  fontFamily={isLight ? "'Times New Roman', Times, serif" : 'monospace'}
+                  fontWeight={isLight ? '600' : 'normal'}
+                >
                   {val.toFixed(decimals)}
                 </text>
               </g>
@@ -471,7 +560,14 @@ export const MotionProfilePlots: React.FC = () => {
 
           {/* Zero baseline */}
           {zeroY >= padT && zeroY <= padT + plotH && (
-            <line x1={padL} y1={zeroY} x2={padL + plotW} y2={zeroY} stroke="#334155" strokeWidth="1.2" />
+            <line
+              x1={padL}
+              y1={zeroY}
+              x2={padL + plotW}
+              y2={zeroY}
+              stroke={isLight ? '#475569' : '#334155'}
+              strokeWidth="1.2"
+            />
           )}
 
           {/* Time axis ticks */}
@@ -480,8 +576,22 @@ export const MotionProfilePlots: React.FC = () => {
             const x = getX(t);
             return (
               <g key={idx}>
-                <line x1={x} y1={padT + plotH} x2={x} y2={padT + plotH + 4} stroke="#475569" />
-                <text x={x} y={padT + plotH + 14} textAnchor="middle" fill="#64748b" fontSize="9" fontFamily="monospace">
+                <line
+                  x1={x}
+                  y1={padT + plotH}
+                  x2={x}
+                  y2={padT + plotH + 4}
+                  stroke={isLight ? '#94a3b8' : '#475569'}
+                />
+                <text
+                  x={x}
+                  y={padT + plotH + 14}
+                  textAnchor="middle"
+                  fill={isLight ? '#0f172a' : '#64748b'}
+                  fontSize="9"
+                  fontFamily={isLight ? "'Times New Roman', Times, serif" : 'monospace'}
+                  fontWeight={isLight ? '600' : 'normal'}
+                >
                   {t.toFixed(1)}s
                 </text>
               </g>
@@ -493,8 +603,24 @@ export const MotionProfilePlots: React.FC = () => {
             const x = getX(wpInfo.time);
             return (
               <g key={wpInfo.id}>
-                <line x1={x} y1={padT} x2={x} y2={padT + plotH} stroke="#f59e0b" strokeWidth="1" strokeDasharray="2 2" opacity="0.6" />
-                <text x={x + 3} y={padT + 12} fill="#d97706" fontSize="8" fontFamily="monospace" fontWeight="bold">
+                <line
+                  x1={x}
+                  y1={padT}
+                  x2={x}
+                  y2={padT + plotH}
+                  stroke={isLight ? '#d97706' : '#f59e0b'}
+                  strokeWidth="1"
+                  strokeDasharray="2 2"
+                  opacity={isLight ? '0.85' : '0.6'}
+                />
+                <text
+                  x={x + 3}
+                  y={padT + 12}
+                  fill={isLight ? '#b45309' : '#d97706'}
+                  fontSize="8"
+                  fontFamily={isLight ? "'Times New Roman', Times, serif" : 'monospace'}
+                  fontWeight="bold"
+                >
                   W{idx + 1}
                 </text>
               </g>
@@ -683,24 +809,38 @@ export const MotionProfilePlots: React.FC = () => {
     const currentPt = points[points.length - 1];
 
     return (
-      <div className="relative bg-slate-950/80 border border-purple-500/30 rounded-xl p-3 shadow-2xl space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-1 border-b border-slate-800 pb-2">
+      <div
+        className={`relative rounded-xl p-3 shadow-sm border transition-colors space-y-2 ${
+          isLight
+            ? 'bg-white border-slate-200 text-slate-800'
+            : 'bg-slate-950/80 border-purple-500/30 text-slate-200 shadow-2xl'
+        }`}
+      >
+        <div
+          className={`flex flex-wrap items-center justify-between gap-2 px-1 border-b pb-2 ${
+            isLight ? 'border-slate-200' : 'border-slate-800'
+          }`}
+        >
           <div className="flex items-center space-x-2">
-            <span className="text-xs font-mono font-bold text-purple-300 flex items-center space-x-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+            <span
+              className={`text-xs font-bold flex items-center space-x-1.5 ${
+                isLight ? 'text-purple-700 font-serif' : 'text-purple-300 font-mono'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-purple-500" />
               <span>{isVi ? 'Mặt Phẳng Pha SMC (Phase Portrait Plane: ė vs e) - Khớp J' : 'SMC Phase Portrait Plane: ė vs e - Joint J'}{activeJoint + 1}</span>
             </span>
-            <span className="text-[10px] font-mono text-slate-400">
+            <span className={`text-[10px] font-mono ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
               Mặt trượt s = ė + {lambdaVal}e = 0
             </span>
           </div>
 
           <div className="flex items-center space-x-2 text-[10px] font-mono">
-            <span className="flex items-center space-x-1 text-amber-300">
-              <span className="w-2.5 h-0.5 bg-amber-400 inline-block border-dashed" />
+            <span className={`flex items-center space-x-1 ${isLight ? 'text-amber-700' : 'text-amber-300'}`}>
+              <span className="w-2.5 h-0.5 bg-amber-500 inline-block border-dashed" />
               <span>Đường trượt s = 0</span>
             </span>
-            <span className="flex items-center space-x-1 text-purple-300">
+            <span className={`flex items-center space-x-1 ${isLight ? 'text-purple-700' : 'text-purple-300'}`}>
               <span className="w-2.5 h-2 bg-purple-500/20 inline-block border border-purple-400/40 rounded-sm" />
               <span>Dải biên |s| ≤ Φ ({phiVal})</span>
             </span>
@@ -710,7 +850,9 @@ export const MotionProfilePlots: React.FC = () => {
         <svg
           ref={svgPhaseRef}
           viewBox={`0 0 ${phaseW} ${phaseH}`}
-          className="w-full h-auto select-none block bg-[#080c14] rounded-lg border border-slate-850"
+          className={`w-full h-auto select-none block rounded-lg border transition-colors ${
+            isLight ? 'bg-white border-slate-200' : 'bg-[#080c14] border-slate-850'
+          }`}
         >
           <defs>
             <clipPath id="phase-clip">
@@ -726,7 +868,7 @@ export const MotionProfilePlots: React.FC = () => {
                 y1={pad}
                 x2={centerX + f * (innerW / 2)}
                 y2={pad + innerH}
-                stroke="#172033"
+                stroke={isLight ? '#e2e8f0' : '#172033'}
                 strokeDasharray="2 3"
               />
               <line
@@ -734,38 +876,104 @@ export const MotionProfilePlots: React.FC = () => {
                 y1={centerY + f * (innerH / 2)}
                 x2={pad + innerW}
                 y2={centerY + f * (innerH / 2)}
-                stroke="#172033"
+                stroke={isLight ? '#e2e8f0' : '#172033'}
                 strokeDasharray="2 3"
               />
             </g>
           ))}
 
           {/* Center Crosshair Axes (e = 0, edot = 0) */}
-          <line x1={pad} y1={centerY} x2={pad + innerW} y2={centerY} stroke="#334155" strokeWidth="1.5" />
-          <line x1={centerX} y1={pad} x2={centerX} y2={pad + innerH} stroke="#334155" strokeWidth="1.5" />
+          <line
+            x1={pad}
+            y1={centerY}
+            x2={pad + innerW}
+            y2={centerY}
+            stroke={isLight ? '#475569' : '#334155'}
+            strokeWidth="1.5"
+          />
+          <line
+            x1={centerX}
+            y1={pad}
+            x2={centerX}
+            y2={pad + innerH}
+            stroke={isLight ? '#475569' : '#334155'}
+            strokeWidth="1.5"
+          />
 
           {/* Axis Labels */}
-          <text x={pad + innerW - 10} y={centerY - 6} fill="#94a3b8" fontSize="10" fontFamily="monospace" textAnchor="end">
+          <text
+            x={pad + innerW - 10}
+            y={centerY - 6}
+            fill={isLight ? '#0f172a' : '#94a3b8'}
+            fontSize="10"
+            fontFamily={isLight ? "'Times New Roman', Times, serif" : 'monospace'}
+            fontWeight={isLight ? '600' : 'normal'}
+            textAnchor="end"
+          >
             Sai số e (deg) →
           </text>
-          <text x={centerX + 8} y={pad + 12} fill="#94a3b8" fontSize="10" fontFamily="monospace">
+          <text
+            x={centerX + 8}
+            y={pad + 12}
+            fill={isLight ? '#0f172a' : '#94a3b8'}
+            fontSize="10"
+            fontFamily={isLight ? "'Times New Roman', Times, serif" : 'monospace'}
+            fontWeight={isLight ? '600' : 'normal'}
+          >
             ↑ Đạo hàm sai số ė (deg/s)
           </text>
-          <text x={centerX + 6} y={centerY + 14} fill="#64748b" fontSize="9" fontFamily="monospace">
+          <text
+            x={centerX + 6}
+            y={centerY + 14}
+            fill={isLight ? '#475569' : '#64748b'}
+            fontSize="9"
+            fontFamily={isLight ? "'Times New Roman', Times, serif" : 'monospace'}
+          >
             (0, 0)
           </text>
 
           {/* Numeric Axis Extents */}
-          <text x={pad + 5} y={centerY + 14} fill="#64748b" fontSize="9" fontFamily="monospace">
+          <text
+            x={pad + 5}
+            y={centerY + 14}
+            fill={isLight ? '#0f172a' : '#64748b'}
+            fontSize="9"
+            fontFamily={isLight ? "'Times New Roman', Times, serif" : 'monospace'}
+            fontWeight={isLight ? '600' : 'normal'}
+          >
             {-maxE.toFixed(1)}°
           </text>
-          <text x={pad + innerW - 5} y={centerY + 14} fill="#64748b" fontSize="9" fontFamily="monospace" textAnchor="end">
+          <text
+            x={pad + innerW - 5}
+            y={centerY + 14}
+            fill={isLight ? '#0f172a' : '#64748b'}
+            fontSize="9"
+            fontFamily={isLight ? "'Times New Roman', Times, serif" : 'monospace'}
+            fontWeight={isLight ? '600' : 'normal'}
+            textAnchor="end"
+          >
             {maxE.toFixed(1)}°
           </text>
-          <text x={centerX - 8} y={pad + innerH - 4} fill="#64748b" fontSize="9" fontFamily="monospace" textAnchor="end">
+          <text
+            x={centerX - 8}
+            y={pad + innerH - 4}
+            fill={isLight ? '#0f172a' : '#64748b'}
+            fontSize="9"
+            fontFamily={isLight ? "'Times New Roman', Times, serif" : 'monospace'}
+            fontWeight={isLight ? '600' : 'normal'}
+            textAnchor="end"
+          >
             {-maxEdot.toFixed(1)}°/s
           </text>
-          <text x={centerX - 8} y={pad + 12} fill="#64748b" fontSize="9" fontFamily="monospace" textAnchor="end">
+          <text
+            x={centerX - 8}
+            y={pad + 12}
+            fill={isLight ? '#0f172a' : '#64748b'}
+            fontSize="9"
+            fontFamily={isLight ? "'Times New Roman', Times, serif" : 'monospace'}
+            fontWeight={isLight ? '600' : 'normal'}
+            textAnchor="end"
+          >
             {maxEdot.toFixed(1)}°/s
           </text>
 
@@ -857,7 +1065,7 @@ export const MotionProfilePlots: React.FC = () => {
 
     exportSubplotsToPNG(svgs, titles, {
       dpi,
-      theme: 'dark',
+      theme: isLight ? 'academic-white' : 'dark',
       robotName: `${robotModel.manufacturer} ${robotModel.modelName}`,
       interpolationType,
       totalDuration,
@@ -875,6 +1083,7 @@ export const MotionProfilePlots: React.FC = () => {
 
     exportSubplotsToPDF(svgs, titles, {
       robotName: `${robotModel.manufacturer} ${robotModel.modelName}`,
+      theme: isLight ? 'academic-white' : 'dark',
       interpolationType,
       totalDuration,
       waypointsCount: waypoints.length,
@@ -891,17 +1100,31 @@ export const MotionProfilePlots: React.FC = () => {
   };
 
   return (
-    <div className="space-y-3 font-sans text-slate-200">
+    <div
+      className={`space-y-3 font-sans transition-colors ${
+        isLight ? 'text-slate-800' : 'text-slate-200'
+      }`}
+    >
       {/* Top Command Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800">
+      <div
+        className={`flex flex-wrap items-center justify-between gap-2 pb-2 border-b ${
+          isLight ? 'border-slate-200' : 'border-slate-800'
+        }`}
+      >
         {/* Plot Data Source Selector: Kinematic vs Tracking vs Dynamic */}
-        <div className="flex items-center space-x-1.5 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs font-mono">
+        <div
+          className={`flex items-center space-x-1.5 p-1 rounded-lg border text-xs font-mono ${
+            isLight ? 'bg-slate-100 border-slate-300' : 'bg-slate-950 border-slate-800'
+          }`}
+        >
           <span className="text-[11px] text-slate-500 uppercase px-1 font-semibold">Mode:</span>
           <button
             onClick={() => setPlotSource('kinematic')}
             className={`px-2 py-0.5 rounded transition ${
               plotSource === 'kinematic'
                 ? 'bg-blue-600 text-white font-bold shadow'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
             title="Đồ thị quỹ đạo tham chiếu động học q_d(t)"
@@ -913,6 +1136,8 @@ export const MotionProfilePlots: React.FC = () => {
             className={`px-2 py-0.5 rounded transition ${
               plotSource === 'tracking-compare'
                 ? 'bg-amber-600 text-white font-bold shadow'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
             title="So sánh đáp ứng thực tế q(t) với tham chiếu q_d(t) & sai số bám e(t)"
@@ -924,6 +1149,8 @@ export const MotionProfilePlots: React.FC = () => {
             className={`px-2 py-0.5 rounded transition ${
               plotSource === 'dynamic'
                 ? 'bg-emerald-600 text-white font-bold shadow'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
             title="Đồ thị phản hồi động lực học thực tế q_act(t) & sai số bám e(t)"
@@ -933,20 +1160,26 @@ export const MotionProfilePlots: React.FC = () => {
 
           {/* Live Dynamics Simulation Active Indicator */}
           {dynamicsSettings.isRunning && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] animate-pulse">
-              <Zap className="w-3 h-3 text-emerald-400" />
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-500 border border-emerald-500/40 text-[10px] animate-pulse font-bold">
+              <Zap className="w-3 h-3 text-emerald-500" />
               <span>500Hz: {dynamicsSettings.controllerType}</span>
             </span>
           )}
         </div>
 
         {/* Subplot vs Single Switcher */}
-        <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs font-mono">
+        <div
+          className={`flex items-center space-x-1 p-1 rounded-lg border text-xs font-mono ${
+            isLight ? 'bg-slate-100 border-slate-300' : 'bg-slate-950 border-slate-800'
+          }`}
+        >
           <button
             onClick={() => setLayoutMode('subplots')}
             className={`flex items-center space-x-1 px-2.5 py-1 rounded transition ${
               layoutMode === 'subplots'
                 ? 'bg-purple-600 text-white font-bold shadow'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -956,7 +1189,11 @@ export const MotionProfilePlots: React.FC = () => {
           <button
             onClick={() => setLayoutMode('positions')}
             className={`px-2 py-1 rounded transition ${
-              layoutMode === 'positions' ? 'bg-sky-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+              layoutMode === 'positions'
+                ? 'bg-sky-600 text-white font-bold'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             Position (q)
@@ -964,7 +1201,11 @@ export const MotionProfilePlots: React.FC = () => {
           <button
             onClick={() => setLayoutMode('velocities')}
             className={`px-2 py-1 rounded transition ${
-              layoutMode === 'velocities' ? 'bg-sky-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+              layoutMode === 'velocities'
+                ? 'bg-sky-600 text-white font-bold'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             Velocity (v)
@@ -972,7 +1213,11 @@ export const MotionProfilePlots: React.FC = () => {
           <button
             onClick={() => setLayoutMode('accelerations')}
             className={`px-2 py-1 rounded transition ${
-              layoutMode === 'accelerations' ? 'bg-sky-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+              layoutMode === 'accelerations'
+                ? 'bg-sky-600 text-white font-bold'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             {plotSource !== 'kinematic' ? 'Error e(t)' : 'Accel (a)'}
@@ -982,29 +1227,41 @@ export const MotionProfilePlots: React.FC = () => {
             className={`flex items-center space-x-1 px-2.5 py-1 rounded transition ${
               layoutMode === 'phase-plane'
                 ? 'bg-purple-600 text-white font-bold shadow'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
             title="Đồ thị mặt phẳng pha (Phase Plane: ė theo e) & mặt trượt SMC s = 0"
           >
-            <Sparkles className="w-3.5 h-3.5 text-purple-300" />
+            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
             <span>Phase Plane (ė vs e)</span>
           </button>
         </div>
 
         {/* Joint Filter Selector */}
-        <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs font-mono">
+        <div
+          className={`flex items-center space-x-1 p-1 rounded-lg border text-xs font-mono ${
+            isLight ? 'bg-slate-100 border-slate-300' : 'bg-slate-950 border-slate-800'
+          }`}
+        >
           <button
             onClick={() => setSelectedJoint('all')}
             className={`px-2 py-0.5 rounded transition ${
               selectedJoint === 'all'
-                ? 'bg-slate-700 text-white font-bold'
+                ? isLight
+                  ? 'bg-slate-300 text-slate-900 font-bold'
+                  : 'bg-slate-700 text-white font-bold'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             All
           </button>
           {Array.from({ length: dof }).map((_, j) => {
-            const style = curveStyles[j] || { color: DEFAULT_JOINT_COLORS[j] };
+            const style = curveStyles[j] || {
+              color: isLight ? ACADEMIC_JOINT_COLORS[j % 7] : DEFAULT_JOINT_COLORS[j % 7],
+            };
             return (
               <button
                 key={j}
@@ -1014,7 +1271,11 @@ export const MotionProfilePlots: React.FC = () => {
                 }}
                 className={`px-2 py-0.5 rounded border transition ${
                   selectedJoint === j
-                    ? 'bg-slate-800 font-bold'
+                    ? isLight
+                      ? 'bg-slate-200 font-bold'
+                      : 'bg-slate-800 font-bold'
+                    : isLight
+                    ? 'text-slate-600 hover:text-slate-900'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -1031,12 +1292,14 @@ export const MotionProfilePlots: React.FC = () => {
             onClick={() => setIsStyleEditorOpen(!isStyleEditorOpen)}
             className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono font-medium transition ${
               isStyleEditorOpen
-                ? 'bg-sky-500/20 text-sky-300 border-sky-500/50 shadow'
+                ? 'bg-sky-500/20 text-sky-400 border-sky-500 font-bold shadow'
+                : isLight
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
                 : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white'
             }`}
             title="Mở bảng chỉnh sửa Color, Linewidth, Linestyle của từng đường đồ thị"
           >
-            <Palette className="w-3.5 h-3.5 text-sky-400" />
+            <Palette className="w-3.5 h-3.5 text-sky-500" />
             <span>{isStyleEditorOpen ? 'Edit Style: ON' : 'Edit Style'}</span>
           </button>
 
@@ -1045,16 +1308,20 @@ export const MotionProfilePlots: React.FC = () => {
             onClick={handleExportCSV}
             className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg border text-xs font-mono transition ${
               plotSource !== 'kinematic' && dynamicSamples && dynamicSamples.length > 0
-                ? 'bg-emerald-950/60 text-emerald-300 border-emerald-600/50 hover:bg-emerald-900/60'
+                ? isLight
+                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200'
+                  : 'bg-emerald-950/60 text-emerald-300 border-emerald-600/50 hover:bg-emerald-900/60'
+                : isLight
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
                 : 'bg-slate-800 hover:bg-slate-750 text-slate-200 border-slate-700'
             }`}
             title={
               plotSource !== 'kinematic' && dynamicSamples && dynamicSamples.length > 0
-                ? (isVi ? 'Xuất dữ liệu động học & động lực học thực tế (q, q_des, error, torques, energy) dạng CSV' : 'Export kinematic & dynamic telemetry (q, q_des, error, torques, energy) as CSV')
+                ? (isVi ? 'Xuất dữ liệu động học & động lực học thực tế dạng CSV' : 'Export kinematic & dynamic telemetry as CSV')
                 : (isVi ? 'Xuất bảng dữ liệu đầy đủ dạng file CSV để vẽ lại bằng MATLAB/Python' : 'Export complete numerical time-series to CSV for MATLAB/Python replotting')
             }
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" />
             <span>{plotSource !== 'kinematic' && dynamicSamples && dynamicSamples.length > 0 ? 'CSV (Dyn)' : 'CSV'}</span>
           </button>
 
@@ -1062,22 +1329,41 @@ export const MotionProfilePlots: React.FC = () => {
           <div className="relative">
             <button
               onClick={() => setIsPngMenuOpen(!isPngMenuOpen)}
-              className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-mono transition"
+              className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg border text-xs font-mono transition ${
+                isLight
+                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                  : 'bg-slate-800 hover:bg-slate-750 text-slate-200 border-slate-700'
+              }`}
               title={isVi ? "Xuất ảnh PNG độ nét cao (96, 150, 300, 600 DPI)" : "Export high-resolution PNG (96, 150, 300, 600 DPI)"}
             >
-              <FileImage className="w-3.5 h-3.5 text-sky-400" />
+              <FileImage className="w-3.5 h-3.5 text-sky-500" />
               <span>PNG DPI</span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
             </button>
 
             {isPngMenuOpen && (
-              <div className="absolute right-0 top-full mt-1 w-32 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl p-1 z-30 font-mono text-xs">
-                {[96, 150, 300, 600].map((dpi) => (
+              <div
+                className={`absolute right-0 top-full mt-1 w-44 rounded-xl border shadow-xl p-1 z-30 font-mono text-xs ${
+                  isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-700 text-slate-200'
+                }`}
+              >
+                <div className="px-2 py-1 text-[10px] text-slate-400 uppercase font-semibold border-b border-slate-700/50">
+                  Select Resolution
+                </div>
+                {[
+                  { dpi: 96, label: '96 DPI (Web Preview)' },
+                  { dpi: 150, label: '150 DPI (Presentation)' },
+                  { dpi: 300, label: '300 DPI (IEEE Standard)' },
+                  { dpi: 600, label: '600 DPI (Ultra Camera-Ready)' },
+                ].map(({ dpi, label }) => (
                   <button
                     key={dpi}
                     onClick={() => handleExportPNG(dpi)}
-                    className="w-full text-left px-2 py-1 rounded hover:bg-sky-600 hover:text-white transition"
+                    className={`w-full text-left px-2 py-1.5 rounded transition ${
+                      isLight ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-slate-800 text-slate-200'
+                    }`}
                   >
-                    {dpi} DPI {dpi >= 300 ? '(Journal)' : ''}
+                    {label}
                   </button>
                 ))}
               </div>
@@ -1087,10 +1373,14 @@ export const MotionProfilePlots: React.FC = () => {
           {/* Export PDF */}
           <button
             onClick={handleExportPDF}
-            className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-rose-600/30 hover:bg-rose-600/40 text-rose-300 border border-rose-500/40 text-xs font-mono transition"
+            className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg border text-xs font-mono transition ${
+              isLight
+                ? 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100'
+                : 'bg-rose-600/30 hover:bg-rose-600/40 text-rose-300 border border-rose-500/40'
+            }`}
             title={isVi ? "Xuất báo cáo khoa học dạng tài liệu PDF chất lượng cao" : "Export publication-quality PDF scientific report"}
           >
-            <FileText className="w-3.5 h-3.5 text-rose-400" />
+            <FileText className="w-3.5 h-3.5 text-rose-500" />
             <span>PDF</span>
           </button>
         </div>
@@ -1100,20 +1390,46 @@ export const MotionProfilePlots: React.FC = () => {
       {/* PLOT CURVE STYLE EDITOR PANEL (Color, Linewidth, Linestyle) */}
       {/* ======================================================== */}
       {isStyleEditorOpen && (
-        <div className="p-3.5 bg-slate-950/95 border border-sky-500/40 rounded-xl space-y-3 shadow-2xl animate-in slide-in-from-top-2 duration-150">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+        <div
+          className={`p-3.5 rounded-xl space-y-3 shadow-xl transition-colors border ${
+            isLight
+              ? 'bg-white border-slate-200 text-slate-800'
+              : 'bg-slate-950/95 border-sky-500/40 text-slate-200 shadow-2xl'
+          }`}
+        >
+          <div
+            className={`flex items-center justify-between border-b pb-2 ${
+              isLight ? 'border-slate-200' : 'border-slate-800'
+            }`}
+          >
             <div className="flex items-center space-x-2">
-              <Sliders className="w-4 h-4 text-sky-400" />
-              <span className="text-xs font-mono font-bold text-sky-300">
-                Tùy biến Đường đồ thị (Curve Series Style Editor)
+              <Sliders className="w-4 h-4 text-sky-500" />
+              <span className={`text-xs font-mono font-bold ${isLight ? 'text-slate-900' : 'text-sky-300'}`}>
+                {isVi ? 'Tùy biến Đường đồ thị & Chuẩn xuất bản' : 'Curve Series Style & Publication Presets'}
               </span>
             </div>
 
             {/* Presets */}
-            <div className="flex items-center space-x-2 text-xs font-mono">
+            <div className="flex items-center space-x-1.5 text-xs font-mono">
+              <button
+                onClick={applyAcademicPreset}
+                className={`flex items-center space-x-1 px-2 py-0.5 rounded border transition ${
+                  isLight
+                    ? 'bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-300 font-bold'
+                    : 'bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 border-blue-500/40'
+                }`}
+                title="Bảng màu độ tương phản cao chuẩn IEEE Transactions on Robotics"
+              >
+                <Sparkles className="w-3 h-3 text-blue-500" />
+                <span>IEEE Academic</span>
+              </button>
               <button
                 onClick={resetToDefaultStyles}
-                className="flex items-center space-x-1 px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition"
+                className={`flex items-center space-x-1 px-2 py-0.5 rounded border transition ${
+                  isLight
+                    ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-300'
+                    : 'bg-slate-800 text-slate-300 hover:text-white border-slate-700'
+                }`}
                 title="Khôi phục bảng màu chuẩn CAE mặc định"
               >
                 <RotateCcw className="w-3 h-3" />
@@ -1121,11 +1437,14 @@ export const MotionProfilePlots: React.FC = () => {
               </button>
               <button
                 onClick={applyMonochromePreset}
-                className="flex items-center space-x-1 px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition"
+                className={`flex items-center space-x-1 px-2 py-0.5 rounded border transition ${
+                  isLight
+                    ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-300'
+                    : 'bg-slate-800 text-slate-300 hover:text-white border-slate-700'
+                }`}
                 title="Áp dụng kiểu nét đen trắng cho bài báo in ấn (Solid, Dashed, Dotted)"
               >
-                <Sparkles className="w-3 h-3 text-amber-400" />
-                <span>Báo chí Trắng Đen</span>
+                <span>Trắng Đen (B&W)</span>
               </button>
             </div>
           </div>
@@ -1134,7 +1453,7 @@ export const MotionProfilePlots: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
             {Array.from({ length: dof }).map((_, j) => {
               const style = curveStyles[j] || {
-                color: DEFAULT_JOINT_COLORS[j],
+                color: isLight ? ACADEMIC_JOINT_COLORS[j % 7] : DEFAULT_JOINT_COLORS[j % 7],
                 lineWidth: 2.0,
                 lineStyle: 'solid',
                 visible: true,
@@ -1144,7 +1463,9 @@ export const MotionProfilePlots: React.FC = () => {
                 <div
                   key={j}
                   className={`p-2.5 rounded-lg border transition space-y-2 ${
-                    style.visible
+                    isLight
+                      ? 'bg-slate-50 border-slate-200'
+                      : style.visible
                       ? 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
                       : 'bg-slate-950/50 border-slate-900 opacity-60'
                   }`}
@@ -1154,13 +1475,15 @@ export const MotionProfilePlots: React.FC = () => {
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => updateJointStyle(j, { visible: !style.visible })}
-                        className="p-1 rounded hover:bg-slate-800 transition"
+                        className={`p-1 rounded transition ${
+                          isLight ? 'hover:bg-slate-200' : 'hover:bg-slate-800'
+                        }`}
                         title={style.visible ? 'Ẩn đường này' : 'Hiện đường này'}
                       >
                         {style.visible ? (
-                          <Eye className="w-3.5 h-3.5 text-sky-400" />
+                          <Eye className="w-3.5 h-3.5 text-sky-500" />
                         ) : (
-                          <EyeOff className="w-3.5 h-3.5 text-slate-500" />
+                          <EyeOff className="w-3.5 h-3.5 text-slate-400" />
                         )}
                       </button>
                       <span className="text-xs font-mono font-bold" style={{ color: style.color }}>
@@ -1184,24 +1507,26 @@ export const MotionProfilePlots: React.FC = () => {
 
                   {/* Color Picker & Swatches */}
                   <div className="flex items-center space-x-2">
-                    <span className="text-[10px] font-mono text-slate-400 shrink-0">Màu:</span>
+                    <span className={`text-[10px] font-mono shrink-0 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                      Màu:
+                    </span>
                     <input
                       type="color"
                       value={style.color}
                       onChange={(e) => updateJointStyle(j, { color: e.target.value })}
-                      className="w-6 h-6 rounded cursor-pointer border border-slate-700 bg-transparent p-0"
+                      className="w-6 h-6 rounded cursor-pointer border border-slate-300 dark:border-slate-700 bg-transparent p-0"
                       title="Chọn màu tự do"
                     />
                     <div className="flex items-center space-x-1 overflow-x-auto py-0.5">
-                      {PRESET_COLOR_SWATCHES.slice(0, 6).map((c) => (
+                      {(isLight ? ACADEMIC_JOINT_COLORS : PRESET_COLOR_SWATCHES.slice(0, 7)).map((c) => (
                         <button
                           key={c}
                           onClick={() => updateJointStyle(j, { color: c })}
                           style={{ backgroundColor: c }}
                           className={`w-3.5 h-3.5 rounded-full border ${
                             style.color.toLowerCase() === c.toLowerCase()
-                              ? 'ring-2 ring-white border-transparent'
-                              : 'border-slate-800 hover:scale-110'
+                              ? 'ring-2 ring-purple-500 border-white scale-110'
+                              : 'border-slate-400 dark:border-slate-800 hover:scale-110'
                           } transition-transform`}
                         />
                       ))}
@@ -1212,11 +1537,17 @@ export const MotionProfilePlots: React.FC = () => {
                   <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
                     {/* Linewidth Stepper */}
                     <div>
-                      <span className="text-slate-400 block mb-0.5">Nét ({style.lineWidth}px):</span>
+                      <span className={`block mb-0.5 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                        Nét ({style.lineWidth}px):
+                      </span>
                       <select
                         value={style.lineWidth}
                         onChange={(e) => updateJointStyle(j, { lineWidth: parseFloat(e.target.value) })}
-                        className="w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-1 text-slate-200 font-mono text-[11px]"
+                        className={`w-full rounded px-1.5 py-1 font-mono text-[11px] border ${
+                          isLight
+                            ? 'bg-white border-slate-300 text-slate-800'
+                            : 'bg-slate-950 border-slate-800 text-slate-200'
+                        }`}
                       >
                         <option value="1">1.0 px (Mảnh)</option>
                         <option value="1.5">1.5 px</option>
@@ -1229,11 +1560,17 @@ export const MotionProfilePlots: React.FC = () => {
 
                     {/* Linestyle Selector */}
                     <div>
-                      <span className="text-slate-400 block mb-0.5">Kiểu nét:</span>
+                      <span className={`block mb-0.5 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                        Kiểu nét:
+                      </span>
                       <select
                         value={style.lineStyle}
                         onChange={(e) => updateJointStyle(j, { lineStyle: e.target.value as LineStyleType })}
-                        className="w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-1 text-slate-200 font-mono text-[11px]"
+                        className={`w-full rounded px-1.5 py-1 font-mono text-[11px] border ${
+                          isLight
+                            ? 'bg-white border-slate-300 text-slate-800'
+                            : 'bg-slate-950 border-slate-800 text-slate-200'
+                        }`}
                       >
                         <option value="solid">Solid (Liền)</option>
                         <option value="dashed">Dashed (Đứt nét)</option>
