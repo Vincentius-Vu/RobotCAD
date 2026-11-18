@@ -96,11 +96,11 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
   // Synchronize Pop-out child window body class and title when theme or language changes
   useEffect(() => {
     if (popoutWindowRef.current && !popoutWindowRef.current.closed) {
-      popoutWindowRef.current.document.body.className = isLight
-        ? 'bg-slate-50 text-slate-800 font-sans select-none overflow-hidden m-0 p-0'
-        : 'bg-slate-950 text-slate-100 font-sans select-none overflow-hidden m-0 p-0';
+      popoutWindowRef.current.document.documentElement.setAttribute('data-theme', isLight ? 'light' : 'dark');
+      popoutWindowRef.current.document.body.className =
+        'bg-slate-950 text-slate-100 font-sans select-none overflow-hidden m-0 p-0';
       popoutWindowRef.current.document.title = isVi
-        ? 'RoboCAD 3D • Multi-Physics Telemetry Oscilloscope (Đa Màn Hình)'
+        ? 'RoboCAD 3D • Dao Động Ký Đa Miền (Đa Màn Hình)'
         : 'RoboCAD 3D • Multi-Physics Telemetry Oscilloscope (Pop-out Window)';
     }
   }, [isLight, isVi]);
@@ -127,8 +127,9 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
       return;
     }
 
+    popout.document.documentElement.setAttribute('data-theme', isLight ? 'light' : 'dark');
     popout.document.title = isVi
-      ? 'RoboCAD 3D • Multi-Physics Telemetry Oscilloscope (Đa Màn Hình)'
+      ? 'RoboCAD 3D • Dao Động Ký Đa Miền (Đa Màn Hình)'
       : 'RoboCAD 3D • Multi-Physics Telemetry Oscilloscope (Pop-out Window)';
 
     // Copy all parent stylesheets into child window for full Tailwind support
@@ -136,10 +137,9 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
       popout.document.head.appendChild(node.cloneNode(true));
     });
 
-    // Theme-sensitive background container
-    popout.document.body.className = isLight
-      ? 'bg-slate-50 text-slate-800 font-sans select-none overflow-hidden m-0 p-0'
-      : 'bg-slate-950 text-slate-100 font-sans select-none overflow-hidden m-0 p-0';
+    // Theme-sensitive background container (inherits data-theme via index.css)
+    popout.document.body.className =
+      'bg-slate-950 text-slate-100 font-sans select-none overflow-hidden m-0 p-0';
 
     const container = popout.document.createElement('div');
     container.id = 'popout-oscilloscope-root';
@@ -228,13 +228,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
 
     if (!hasData) {
       return (
-        <div
-          className={`w-full h-48 flex items-center justify-center rounded-xl border font-mono text-xs ${
-            isLight
-              ? 'bg-slate-50 border-slate-200 text-slate-500'
-              : 'bg-slate-950/80 border-slate-800 text-slate-500'
-          }`}
-        >
+        <div className="w-full h-48 flex items-center justify-center rounded-xl border font-mono text-xs bg-slate-900 border-slate-800 text-slate-400">
           {isVi
             ? 'Chưa có dữ liệu chuỗi thời gian. Hãy nhấn "Mô phỏng" hoặc "Phát quỹ đạo" để ghi nhận tín hiệu.'
             : 'No time-series data recorded. Press "Simulate" or "Play Trajectory" to capture waveforms.'}
@@ -327,34 +321,24 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
     ];
 
     return (
-      <div
-        className={`border rounded-xl p-3 shadow-sm flex flex-col mb-3 transition-colors ${
-          isLight
-            ? 'bg-white border-slate-200 text-slate-800'
-            : 'bg-slate-950/90 border-slate-800 text-slate-100'
-        }`}
-      >
+      <div className="border rounded-xl p-3 shadow-sm flex flex-col mb-3 transition-colors bg-slate-950 border-slate-800 text-slate-100">
         <div className="flex items-center justify-between mb-1.5 px-2">
           <div className="flex items-center space-x-2">
             <span
               className={`text-xs font-bold ${
-                isLight ? 'text-slate-900 font-serif' : 'text-slate-200 font-mono'
+                isLight ? 'text-slate-100 font-serif' : 'text-slate-100 font-mono'
               }`}
             >
               {title}
             </span>
-            <span
-              className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
-                isLight ? 'bg-slate-100 text-slate-700 border-slate-300' : 'bg-slate-800 text-slate-400 border-slate-700'
-              }`}
-            >
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border bg-slate-800 text-slate-300 border-slate-700">
               {unit}
             </span>
           </div>
 
           <div className="flex items-center space-x-3 text-[11px] font-mono">
             {selectedJoint !== 'all' ? (
-              <span className={`font-bold ${isLight ? 'text-blue-700' : 'text-sky-300'}`}>
+              <span className={`font-bold ${isLight ? 'text-sky-600' : 'text-sky-300'}`}>
                 {isVi ? `J${selectedJoint + 1} hiện thời:` : `Current J${selectedJoint + 1}:`}{' '}
                 {extractValues(
                   samples[Math.min(samples.length - 1, Math.floor((currentTime / tMax) * (samples.length - 1)))],
@@ -363,7 +347,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
                 {unit}
               </span>
             ) : (
-              <span className={isLight ? 'text-slate-500' : 'text-slate-400'}>
+              <span className="text-slate-400">
                 {isVi ? `Hiển thị tất cả ${dof} khớp` : `Displaying all ${dof} joints`}
               </span>
             )}
@@ -571,37 +555,23 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
 
   // Content Body of the Oscilloscope
   const dialogContent = (
-    <div
-      className={`flex flex-col h-full select-none overflow-hidden border rounded-2xl shadow-2xl transition-colors ${
-        isLight ? 'bg-white text-slate-800 border-slate-300' : 'bg-slate-950 text-slate-100 border-slate-800'
-      }`}
-    >
+    <div className="flex flex-col h-full select-none overflow-hidden border rounded-2xl shadow-2xl transition-colors bg-slate-950 text-slate-100 border-slate-800">
       {/* Top Header Bar */}
-      <div
-        className={`h-13 px-4 border-b flex items-center justify-between shrink-0 ${
-          isLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-slate-800'
-        }`}
-      >
+      <div className="h-13 px-4 border-b flex items-center justify-between shrink-0 bg-slate-900 border-slate-800">
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 rounded-lg bg-sky-500/20 border border-sky-400/30 flex items-center justify-center text-sky-500 shadow-sm">
             <Activity className="w-4 h-4" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <span className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
+              <span className="text-sm font-bold text-slate-100">
                 {isVi ? 'Bộ Dao Động Ký & Phân Tích Vật Lý Đa Miền' : 'Multi-Physics Telemetry & Oscilloscope Studio'}
               </span>
-              <span
-                className={`text-[10px] font-mono px-2 py-0.5 rounded-full border font-semibold ${
-                  isLight
-                    ? 'bg-purple-100 text-purple-800 border-purple-300'
-                    : 'bg-purple-500/20 text-purple-300 border-purple-500/30'
-                }`}
-              >
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border font-semibold bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/30">
                 Multi-Physics Scope (500 Hz RK4 + 10 kHz FOC)
               </span>
             </div>
-            <p className={`text-[11px] ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+            <p className="text-[11px] text-slate-400">
               {isVi
                 ? 'Quan sát thời gian thực: Động học, Mô-men RNE, Dòng điện Stator Iq, Điện áp Bus DC & Nhiệt độ Biến tần'
                 : 'Real-time telemetry: Kinematics, RNE Torques, Stator Current Iq, DC-Bus Voltage & Inverter Thermal Dynamics'}
@@ -615,11 +585,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
           {!isPopoutActive ? (
             <button
               onClick={handleOpenPopout}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono font-medium transition shadow-sm ${
-                isLight
-                  ? 'bg-sky-50 hover:bg-sky-100 text-sky-700 border-sky-300'
-                  : 'bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border-sky-500/30'
-              }`}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono font-medium transition shadow-sm bg-sky-600/20 hover:bg-sky-600/30 text-sky-600 dark:text-sky-300 border-sky-500/30"
               title={
                 isVi
                   ? 'Mở cửa sổ đồ thị rời ra màn hình thứ hai (Multi-Monitor Pop-out)'
@@ -632,11 +598,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
           ) : (
             <button
               onClick={handleClosePopout}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono font-medium transition shadow-sm ${
-                isLight
-                  ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300'
-                  : 'bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border-emerald-500/30'
-              }`}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono font-medium transition shadow-sm bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-600 dark:text-emerald-300 border-emerald-500/30"
               title={isVi ? 'Thu về cửa sổ chính' : 'Dock back to main window'}
             >
               <ExternalLink className="w-3.5 h-3.5" />
@@ -647,11 +609,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
           {/* Maximize Toggle */}
           <button
             onClick={() => setIsMaximized(!isMaximized)}
-            className={`p-1.5 rounded-lg transition ${
-              isLight
-                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-            }`}
+            className="p-1.5 rounded-lg transition text-slate-400 hover:text-slate-100 hover:bg-slate-800"
             title={
               isMaximized
                 ? isVi
@@ -668,11 +626,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
           {/* Close Dialog */}
           <button
             onClick={onClose}
-            className={`p-1.5 rounded-lg transition ${
-              isLight
-                ? 'text-slate-600 hover:text-rose-600 hover:bg-rose-100'
-                : 'text-slate-400 hover:text-rose-400 hover:bg-rose-500/10'
-            }`}
+            className="p-1.5 rounded-lg transition text-slate-400 hover:text-rose-500 hover:bg-rose-500/10"
             title={t.common.close}
           >
             <X className="w-4 h-4" />
@@ -681,23 +635,15 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
       </div>
 
       {/* Navigation Tabs & Filter Bar */}
-      <div
-        className={`px-4 py-2 border-b flex items-center justify-between text-xs font-mono shrink-0 gap-3 ${
-          isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/80 border-slate-800'
-        }`}
-      >
+      <div className="px-4 py-2 border-b flex items-center justify-between text-xs font-mono shrink-0 gap-3 bg-slate-900 border-slate-800">
         {/* Category Tabs */}
         <div className="flex items-center space-x-1.5 overflow-x-auto">
           <button
             onClick={() => setActiveTab('motors')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition ${
               activeTab === 'motors'
-                ? isLight
-                  ? 'bg-purple-100 text-purple-900 border border-purple-400 font-bold shadow-sm'
-                  : 'bg-purple-600/30 text-purple-200 border border-purple-500 font-bold shadow-sm'
-                : isLight
-                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? 'bg-purple-600/30 text-purple-700 dark:text-purple-200 border border-purple-500 font-bold shadow-sm'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
             }`}
           >
             <Cpu className="w-3.5 h-3.5 text-purple-500" />
@@ -708,12 +654,8 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
             onClick={() => setActiveTab('converter')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition ${
               activeTab === 'converter'
-                ? isLight
-                  ? 'bg-amber-100 text-amber-900 border border-amber-400 font-bold shadow-sm'
-                  : 'bg-amber-600/30 text-amber-200 border border-amber-500 font-bold shadow-sm'
-                : isLight
-                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? 'bg-amber-600/30 text-amber-700 dark:text-amber-200 border border-amber-500 font-bold shadow-sm'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
             }`}
           >
             <Zap className="w-3.5 h-3.5 text-amber-500" />
@@ -724,12 +666,8 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
             onClick={() => setActiveTab('torques')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition ${
               activeTab === 'torques'
-                ? isLight
-                  ? 'bg-sky-100 text-sky-900 border border-sky-400 font-bold shadow-sm'
-                  : 'bg-sky-600/30 text-sky-200 border border-sky-500 font-bold shadow-sm'
-                : isLight
-                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? 'bg-sky-600/30 text-sky-700 dark:text-sky-200 border border-sky-500 font-bold shadow-sm'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
             }`}
           >
             <Gauge className="w-3.5 h-3.5 text-sky-500" />
@@ -740,12 +678,8 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
             onClick={() => setActiveTab('kinematics')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition ${
               activeTab === 'kinematics'
-                ? isLight
-                  ? 'bg-emerald-100 text-emerald-900 border border-emerald-400 font-bold shadow-sm'
-                  : 'bg-emerald-600/30 text-emerald-200 border border-emerald-500 font-bold shadow-sm'
-                : isLight
-                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? 'bg-emerald-600/30 text-emerald-700 dark:text-emerald-200 border border-emerald-500 font-bold shadow-sm'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
             }`}
           >
             <Activity className="w-3.5 h-3.5 text-emerald-500" />
@@ -756,12 +690,8 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
             onClick={() => setActiveTab('errors')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition ${
               activeTab === 'errors'
-                ? isLight
-                  ? 'bg-rose-100 text-rose-900 border border-rose-400 font-bold shadow-sm'
-                  : 'bg-rose-600/30 text-rose-200 border border-rose-500 font-bold shadow-sm'
-                : isLight
-                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? 'bg-rose-600/30 text-rose-700 dark:text-rose-200 border border-rose-500 font-bold shadow-sm'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
             }`}
           >
             <Layers className="w-3.5 h-3.5 text-rose-500" />
@@ -771,19 +701,15 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
 
         {/* Joint Selector Pills */}
         <div className="flex items-center space-x-1 shrink-0">
-          <span className={`text-[10px] mr-1 hidden sm:inline ${isLight ? 'text-slate-600' : 'text-slate-500'}`}>
+          <span className="text-[10px] mr-1 hidden sm:inline text-slate-400">
             {isVi ? 'Khớp:' : 'Joint:'}
           </span>
           <button
             onClick={() => setSelectedJoint('all')}
             className={`px-2 py-0.5 rounded text-[11px] transition ${
               selectedJoint === 'all'
-                ? isLight
-                  ? 'bg-slate-300 text-slate-900 font-bold border border-slate-400'
-                  : 'bg-slate-700 text-white font-bold border border-slate-500'
-                : isLight
-                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? 'bg-sky-600 text-white font-bold shadow-sm'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
             }`}
           >
             {isVi ? 'Tất cả' : 'All'}
@@ -797,12 +723,8 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
               }}
               className={`px-2 py-0.5 rounded border text-[11px] transition ${
                 selectedJoint === j
-                  ? isLight
-                    ? 'bg-slate-200 font-bold'
-                    : 'bg-slate-800 font-bold'
-                  : isLight
-                  ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-slate-800 font-bold shadow-sm'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800 border-transparent'
               }`}
             >
               <span style={{ color: jointColors[j % jointColors.length] }}>J{j + 1}</span>
@@ -1034,11 +956,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
       </div>
 
       {/* Synchronized Timeline Scrubber & Transport Footer */}
-      <div
-        className={`h-14 px-4 border-t flex items-center justify-between shrink-0 gap-4 ${
-          isLight ? 'bg-slate-100 border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-slate-100'
-        }`}
-      >
+      <div className="h-14 px-4 border-t flex items-center justify-between shrink-0 gap-4 bg-slate-900 border-slate-800 text-slate-100">
         {/* Play / Pause / Reset Transport */}
         <div className="flex items-center space-x-2 shrink-0">
           <button
@@ -1071,11 +989,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
               if (activeWorkspaceMode === 'dynamics') resetDynamicsSimulation();
               else seekTrajectoryTime(0);
             }}
-            className={`p-1.5 rounded-lg border transition ${
-              isLight
-                ? 'bg-white text-slate-700 hover:bg-slate-200 border-slate-300'
-                : 'bg-slate-800 text-slate-400 hover:text-white border-slate-700'
-            }`}
+            className="p-1.5 rounded-lg border transition bg-slate-800 text-slate-300 hover:text-slate-100 border-slate-700"
             title={isVi ? 'Khôi phục trạng thái ban đầu' : 'Reset to initial state'}
           >
             <RotateCcw className="w-4 h-4" />
@@ -1084,7 +998,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
 
         {/* Real-time Scrubber Slider */}
         <div className="flex-1 flex items-center space-x-3">
-          <span className={`text-xs font-mono shrink-0 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+          <span className="text-xs font-mono shrink-0 text-slate-400">
             {currentTime.toFixed(2)}s / {totalDuration.toFixed(2)}s
           </span>
           <input
@@ -1094,63 +1008,43 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
             step={0.01}
             value={currentTime}
             onChange={(e) => seekTrajectoryTime(parseFloat(e.target.value))}
-            className={`flex-1 h-1.5 rounded-lg appearance-none cursor-pointer ${
-              isLight ? 'bg-slate-200 accent-sky-600' : 'bg-slate-800 accent-sky-500'
-            }`}
+            className="flex-1 h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-800 accent-sky-500"
           />
         </div>
 
         {/* Status Indicators */}
-        <div
-          className={`hidden md:flex items-center space-x-3 text-[11px] font-mono shrink-0 ${
-            isLight ? 'text-slate-600' : 'text-slate-400'
-          }`}
-        >
+        <div className="hidden md:flex items-center space-x-3 text-[11px] font-mono shrink-0 text-slate-400">
           <span className="flex items-center space-x-1">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>500 Hz RK4</span>
           </span>
           <span>•</span>
-          <span className={isLight ? 'text-purple-700 font-bold' : 'text-purple-300'}>FOC 10 kHz</span>
+          <span className="text-purple-600 dark:text-purple-300 font-bold">FOC 10 kHz</span>
           <span>•</span>
-          <span className={isLight ? 'text-amber-700 font-bold' : 'text-amber-300'}>DC 48V</span>
+          <span className="text-amber-600 dark:text-amber-300 font-bold">DC 48V</span>
         </div>
       </div>
     </div>
   );
 
   const mobileDialogContent = (
-    <div
-      className={`flex flex-col h-full select-none overflow-hidden border rounded-2xl shadow-2xl transition-colors ${
-        isLight ? 'bg-white text-slate-800 border-slate-300' : 'bg-slate-950 text-slate-100 border-slate-800'
-      }`}
-    >
+    <div className="flex flex-col h-full select-none overflow-hidden border rounded-2xl shadow-2xl transition-colors bg-slate-950 text-slate-100 border-slate-800">
       {/* Top Header Bar */}
-      <div
-        className={`h-14 px-4 border-b flex items-center justify-between shrink-0 ${
-          isLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-slate-800'
-        }`}
-      >
+      <div className="h-14 px-4 border-b flex items-center justify-between shrink-0 bg-slate-900 border-slate-800">
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 rounded-lg bg-sky-500/20 border border-sky-400/30 flex items-center justify-center text-sky-500 shadow-sm">
             <Activity className="w-4 h-4" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <span className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
+              <span className="text-sm font-bold text-slate-100">
                 {isVi ? 'Bộ Dao Động Ký AMR & Hệ Đa Vật Lý AGV' : 'AMR & AGV Multi-Physics Telemetry Oscilloscope'}
               </span>
-              <span
-                className={`text-[10px] font-mono px-2 py-0.5 rounded-full border font-semibold ${
-                  isLight
-                    ? 'bg-sky-100 text-sky-800 border-sky-300'
-                    : 'bg-sky-500/20 text-sky-300 border-sky-500/30'
-                }`}
-              >
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border font-semibold bg-sky-500/20 text-sky-700 dark:text-sky-300 border-sky-500/30">
                 Multi-Physics Scope (20 kHz SPWM + Pacejka Tire + Dual Caster)
               </span>
             </div>
-            <p className={`text-[11px] ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+            <p className="text-[11px] text-slate-400">
               {isVi
                 ? 'Quan sát thời gian thực: Vận tốc Thân xe, Dual-PMSM dq, Lực kéo Lốp Pacejka, Tải trọng Pháp tuyến Fz, Bánh Caster & Tư thế 3D'
                 : 'Real-time observation: Chassis Velocities, Dual-PMSM dq, Pacejka Traction, Dynamic Normal Loads Fz, Caster Dynamics & 3D Attitude'}
@@ -1163,11 +1057,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
           {!isPopoutActive ? (
             <button
               onClick={handleOpenPopout}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono font-medium transition shadow-sm ${
-                isLight
-                  ? 'bg-sky-50 hover:bg-sky-100 text-sky-700 border-sky-300'
-                  : 'bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border-sky-500/30'
-              }`}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono font-medium transition shadow-sm bg-sky-600/20 hover:bg-sky-600/30 text-sky-600 dark:text-sky-300 border-sky-500/30"
               title={
                 isVi
                   ? 'Mở cửa sổ đồ thị rời ra màn hình thứ hai (Multi-Monitor Pop-out)'
@@ -1180,11 +1070,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
           ) : (
             <button
               onClick={handleClosePopout}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono font-medium transition shadow-sm ${
-                isLight
-                  ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300'
-                  : 'bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border-emerald-500/30'
-              }`}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono font-medium transition shadow-sm bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-600 dark:text-emerald-300 border-emerald-500/30"
               title={isVi ? 'Thu về cửa sổ chính' : 'Dock back to main window'}
             >
               <ExternalLink className="w-3.5 h-3.5" />
@@ -1195,11 +1081,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
           {/* Maximize Toggle */}
           <button
             onClick={() => setIsMaximized(!isMaximized)}
-            className={`p-1.5 rounded-lg transition ${
-              isLight
-                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-            }`}
+            className="p-1.5 rounded-lg transition text-slate-400 hover:text-slate-100 hover:bg-slate-800"
             title={
               isMaximized
                 ? isVi
@@ -1216,11 +1098,7 @@ export const MultiPhysicsOscilloscopeDialog: React.FC<MultiPhysicsOscilloscopeDi
           {/* Close Dialog */}
           <button
             onClick={onClose}
-            className={`p-1.5 rounded-lg transition ${
-              isLight
-                ? 'text-slate-600 hover:text-rose-600 hover:bg-rose-100'
-                : 'text-slate-400 hover:text-rose-400 hover:bg-rose-500/10'
-            }`}
+            className="p-1.5 rounded-lg transition text-slate-400 hover:text-rose-500 hover:bg-rose-500/10"
             title={t.common.close}
           >
             <X className="w-4 h-4" />

@@ -332,15 +332,13 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
       {/* Oscilloscope Header Controls */}
       <div className={`flex flex-wrap items-center justify-between gap-2 pb-1 border-b ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
         {/* Domain Tabs */}
-        <div className={`flex items-center space-x-1 p-0.5 rounded-lg border ${isLight ? 'bg-slate-100 border-slate-300' : 'bg-slate-900 border-slate-800'}`}>
+        <div className="flex items-center space-x-1 p-0.5 rounded-lg border bg-slate-900 border-slate-800">
           <button
             onClick={() => setActiveTab('tracking_kds')}
             className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition flex items-center space-x-1.5 ${
               activeTab === 'tracking_kds'
                 ? 'bg-teal-600 text-white shadow-sm font-bold'
-                : isLight
-                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5 text-teal-400" />
@@ -352,9 +350,7 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
             className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition flex items-center space-x-1.5 ${
               activeTab === 'kinematics'
                 ? 'bg-sky-600 text-white shadow-sm font-bold'
-                : isLight
-                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
             }`}
           >
             <Gauge className="w-3.5 h-3.5 text-sky-400" />
@@ -366,9 +362,7 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
             className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition flex items-center space-x-1.5 ${
               activeTab === 'pmsm'
                 ? 'bg-amber-600 text-white shadow-sm font-bold'
-                : isLight
-                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
             }`}
           >
             <Zap className="w-3.5 h-3.5 text-amber-400" />
@@ -380,9 +374,7 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
             className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition flex items-center space-x-1.5 ${
               activeTab === 'pacejka'
                 ? 'bg-emerald-600 text-white shadow-sm font-bold'
-                : isLight
-                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
             }`}
           >
             <Activity className="w-3.5 h-3.5 text-emerald-400" />
@@ -394,9 +386,7 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
             className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition flex items-center space-x-1.5 ${
               activeTab === 'chassis'
                 ? 'bg-purple-600 text-white shadow-sm font-bold'
-                : isLight
-                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
             }`}
           >
             <Waves className="w-3.5 h-3.5 text-purple-400" />
@@ -408,9 +398,7 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
             className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition flex items-center space-x-1.5 ${
               activeTab === 'foc_ccc'
                 ? 'bg-rose-600 text-white shadow-sm font-bold'
-                : isLight
-                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
             }`}
           >
             <Cpu className="w-3.5 h-3.5 text-rose-400" />
@@ -421,9 +409,9 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
         {/* Live Stream & Action Controls */}
         <div className="flex items-center space-x-2">
           {/* Physics Fidelity Badge */}
-          <div className={`px-2 py-0.5 rounded text-[10px] font-mono border hidden sm:flex items-center space-x-1 ${isLight ? 'bg-slate-100 border-slate-300 text-slate-700' : 'bg-slate-900 border-slate-750 text-slate-300'}`}>
-            <span className={isLight ? 'text-slate-500' : 'text-slate-500'}>{language === 'vi' ? 'Mô hình:' : 'Plant:'}</span>
-            <span className={`${isLight ? 'text-blue-700 font-bold' : 'text-sky-300 font-semibold'}`}>
+          <div className="px-2 py-0.5 rounded text-[10px] font-mono border hidden sm:flex items-center space-x-1 bg-slate-900 border-slate-800 text-slate-300">
+            <span className="text-slate-400">{language === 'vi' ? 'Mô hình:' : 'Plant:'}</span>
+            <span className="text-sky-600 dark:text-sky-300 font-bold">
               {physicsFidelity === 'multiphysics' ? (language === 'vi' ? 'Đa Vật Lý 1µs' : 'Multi-Physics 1µs') : (language === 'vi' ? 'Động Học' : 'Ideal Kinematics')}
             </span>
           </div>
@@ -453,11 +441,7 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
 
           <button
             onClick={clearAgvHistory}
-            className={`p-1.5 rounded-lg border transition ${
-              isLight
-                ? 'bg-white text-slate-700 hover:bg-slate-100 border-slate-300'
-                : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border-slate-800'
-            }`}
+            className="p-1.5 rounded-lg border transition bg-slate-800 text-slate-300 hover:text-slate-100 hover:bg-slate-750 border-slate-700"
             title={language === 'vi' ? 'Xóa bộ đệm sóng' : 'Clear buffer'}
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -465,11 +449,7 @@ export const MobileRobotOscilloscope: React.FC<MobileRobotOscilloscopeProps> = (
 
           <button
             onClick={handleDownloadCSV}
-            className={`px-2.5 py-1 rounded-lg border flex items-center space-x-1 transition text-[11px] ${
-              isLight
-                ? 'bg-white text-slate-700 hover:bg-slate-100 border-slate-300'
-                : 'bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-800'
-            }`}
+            className="px-2.5 py-1 rounded-lg border flex items-center space-x-1 transition text-[11px] bg-slate-800 text-slate-300 hover:text-slate-100 hover:bg-slate-750 border-slate-700"
             title={language === 'vi' ? 'Xuất dữ liệu sóng ra file CSV' : 'Export CSV'}
           >
             <Download className="w-3.5 h-3.5 text-emerald-500" />
