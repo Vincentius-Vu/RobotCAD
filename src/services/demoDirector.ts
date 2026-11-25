@@ -1,4 +1,9 @@
 import { useRobotStore } from '../store/robotStore';
+import {
+  TEACHER_DAY_TRAJECTORY,
+  CALLIGRAPHY_HOME_JOINTS,
+  CALLIGRAPHY_SHOWCASE_JOINTS,
+} from './calligraphy/calligraphyData';
 
 export type DemoRecordMode = 'tab' | 'canvas' | 'none';
 
@@ -12,9 +17,38 @@ class DemoDirectorService {
   private tabChunks: Blob[] = [];
   private tabTimerId: ReturnType<typeof setInterval> | null = null;
   private activeMode: DemoRecordMode = 'none';
+  private userCameraInteracted = false;
 
   private isCancelled(runId: number): boolean {
     return this.activeRunId !== runId;
+  }
+
+  /**
+   * Called by 3D viewport or OrbitControls when the user manually orbits, pans, or zooms.
+   * Immediately yields automated camera choreography so user has full control.
+   */
+  public notifyUserCameraInteraction(): void {
+    if (useRobotStore.getState().demoState.isRunning) {
+      this.userCameraInteracted = true;
+    }
+  }
+
+  public hasUserInteractedWithCamera(): boolean {
+    return this.userCameraInteracted;
+  }
+
+  public resetUserCameraInteraction(): void {
+    this.userCameraInteracted = false;
+  }
+
+  public resetCameraView(): void {
+    this.userCameraInteracted = false;
+    const scenario = useRobotStore.getState().demoState.scenarioId;
+    if (scenario === 'teacher-day-20-11') {
+      this.animateCameraTo({ azimuthDeg: 90, elevationDeg: 1, distance: 980 }, 800, this.activeRunId);
+    } else {
+      this.animateCameraTo({ azimuthDeg: 45, elevationDeg: 25, distance: 1500 }, 800, this.activeRunId);
+    }
   }
 
   private sleep(ms: number, runId: number): Promise<boolean> {
@@ -68,12 +102,16 @@ class DemoDirectorService {
 
   /**
    * Smoothly orbits/zooms the 3D viewport camera over durationMs.
+   * If the user manually interacts with the camera, automated motion yields immediately.
    */
   private animateCameraTo(
     target: { azimuthDeg?: number; elevationDeg?: number; distance?: number },
     durationMs: number,
     runId: number
   ): Promise<boolean> {
+    if (this.userCameraInteracted) {
+      return Promise.resolve(true);
+    }
     return new Promise((resolve) => {
       const startCam = { ...useRobotStore.getState().cameraSettings };
       const tgtAz = target.azimuthDeg ?? startCam.azimuthDeg;
@@ -82,8 +120,8 @@ class DemoDirectorService {
       const startTime = performance.now();
 
       const step = (now: number) => {
-        if (this.isCancelled(runId)) {
-          resolve(false);
+        if (this.isCancelled(runId) || this.userCameraInteracted) {
+          resolve(!this.isCancelled(runId));
           return;
         }
         const t = Math.min(1, (now - startTime) / Math.max(1, durationMs));
@@ -110,7 +148,7 @@ class DemoDirectorService {
    * Starts full browser-tab MediaRecorder so sidebars, alerts, plots, and 3D canvas are all captured.
    * Returns false if unsupported or cancelled by user.
    */
-  private async startTabRecording(runId: number): Promise<boolean> {
+  private async startTabRecording(runId: number, format: 'mp4' | 'webm' = 'mp4'): Promise<boolean> {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
       return false;
     }
@@ -134,16 +172,30 @@ class DemoDirectorService {
       this.tabStream = stream;
       this.tabChunks = [];
 
-      let mimeType = 'video/webm;codecs=vp9';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'video/webm';
-      }
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = '';
+      let mimeType = '';
+      let extension = 'mp4';
+      if (format === 'mp4') {
+        if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1')) {
+          mimeType = 'video/mp4;codecs=avc1';
+        } else if (MediaRecorder.isTypeSupported('video/mp4;codecs=h264')) {
+          mimeType = 'video/mp4;codecs=h264';
+        } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+          mimeType = 'video/mp4';
+        } else {
+          mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+            ? 'video/webm;codecs=vp9'
+            : 'video/webm';
+          extension = 'webm';
+        }
+      } else {
+        mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+          ? 'video/webm;codecs=vp9'
+          : 'video/webm';
+        extension = 'webm';
       }
 
       this.tabRecorder = mimeType
-        ? new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 12000000 })
+        ? new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 14000000 })
         : new MediaRecorder(stream);
 
       this.tabRecorder.ondataavailable = (ev) => {
@@ -155,11 +207,11 @@ class DemoDirectorService {
       this.tabRecorder.onstop = () => {
         if (this.tabChunks.length > 0) {
           const blob = new Blob(this.tabChunks, {
-            type: this.tabRecorder?.mimeType || 'video/webm',
+            type: this.tabRecorder?.mimeType || (extension === 'mp4' ? 'video/mp4' : 'video/webm'),
           });
           const url = URL.createObjectURL(blob);
           const link = document.createElement('a');
-          link.download = `RoboCAD_Tutorial_PUMA560_FullUI_${Date.now()}.webm`;
+          link.download = `RoboCAD_Recording_FullUI_${Date.now()}.${extension}`;
           link.href = url;
           link.click();
           setTimeout(() => URL.revokeObjectURL(url), 2500);
@@ -240,15 +292,20 @@ class DemoDirectorService {
   /**
    * Runs Scenario 1: PUMA 560 — 6-DOF Kinematics, 8-Branch IK, Wrist Singularity & Quintic RNE Dynamics.
    */
-  public async runScenario1(requestedMode: DemoRecordMode = 'tab'): Promise<void> {
+  public async runScenario1(
+    requestedMode: DemoRecordMode = 'tab',
+    format?: 'mp4' | 'webm'
+  ): Promise<void> {
     this.stopDemo();
+    this.userCameraInteracted = false;
     const runId = ++this.activeRunId;
     const store = useRobotStore.getState();
+    const selectedFormat = format || store.videoFormat || 'mp4';
 
     // 1. Setup recording first so the demo starts cleanly from Step 1
     let actualMode: DemoRecordMode = requestedMode;
     if (requestedMode === 'tab') {
-      const granted = await this.startTabRecording(runId);
+      const granted = await this.startTabRecording(runId, selectedFormat);
       if (this.isCancelled(runId)) return;
       if (!granted) {
         // Fallback silently to 3D Canvas recording if user declined browser tab prompt
@@ -257,7 +314,7 @@ class DemoDirectorService {
     }
 
     if (actualMode === 'canvas') {
-      useRobotStore.getState().startVideoRecording();
+      useRobotStore.getState().startVideoRecording(selectedFormat);
     }
     this.activeMode = actualMode;
 
@@ -419,6 +476,193 @@ class DemoDirectorService {
       await this.animateCameraTo({ azimuthDeg: 45, elevationDeg: 26, distance: 2300 }, 1200, runId);
       if (this.isCancelled(runId)) return;
       if (!(await this.sleep(800, runId))) return;
+    } finally {
+      if (this.activeRunId === runId) {
+        this.stopDemo();
+      }
+    }
+  }
+
+  /**
+   * Runs Vietnamese Teachers' Day 20-11 Calligraphy Scenario:
+   * Franka Emika Panda writes "Happy Vietnamese Teachers' Day: 20-11" on a transparent glass board.
+   */
+  public async runTeacherDay20_11(
+    requestedMode: DemoRecordMode = 'canvas',
+    format?: 'mp4' | 'webm'
+  ): Promise<void> {
+    this.stopDemo();
+    this.userCameraInteracted = false;
+    const runId = ++this.activeRunId;
+    const selectedFormat = format || useRobotStore.getState().videoFormat || 'mp4';
+
+    // 1. Setup recording
+    let actualMode: DemoRecordMode = requestedMode;
+    if (requestedMode === 'tab') {
+      const granted = await this.startTabRecording(runId, selectedFormat);
+      if (this.isCancelled(runId)) return;
+      if (!granted) {
+        actualMode = 'canvas';
+      }
+    }
+
+    if (actualMode === 'canvas') {
+      useRobotStore.getState().startVideoRecording(selectedFormat);
+    }
+    this.activeMode = actualMode;
+
+    const updateStep = (stepIndex: number, captionEn: string, captionVi: string) => {
+      if (this.isCancelled(runId)) return;
+      useRobotStore.getState().setDemoState({
+        isRunning: true,
+        scenarioId: 'teacher-day-20-11',
+        stepIndex,
+        totalSteps: 5,
+        captionEn,
+        captionVi,
+        recordMode: actualMode,
+      });
+    };
+
+    try {
+      // Step 1: Initialize Franka Emika Panda Cobot
+      updateStep(
+        1,
+        'Step 1/5: Loading Franka Emika Panda & Mounting Calligraphy Board',
+        'Bước 1/5: Khởi tạo Cobot Franka Emika Panda & Gắn mặt kính thư pháp'
+      );
+
+      // Close sidebars for unobstructed cinematic view
+      useRobotStore.setState({
+        isLeftSidebarOpen: false,
+        isRightInspectorOpen: false,
+        isBottomDockExpanded: false,
+      });
+
+      // Load Franka Emika Panda if not loaded
+      if (useRobotStore.getState().currentRobotId !== 'FrankaEmikaPanda') {
+        await useRobotStore.getState().loadRobot('FrankaEmikaPanda');
+        if (this.isCancelled(runId)) return;
+        if (!(await this.sleep(800, runId))) return;
+      }
+
+      // Configure clean cinematic rendering in Light Mode
+      useRobotStore.setState({
+        backgroundTheme: 'academic-white',
+        uiTheme: 'light',
+        overlays: {
+          ...useRobotStore.getState().overlays,
+          showFrames: false,
+          showSkeleton: false,
+          showTrace: false,
+        },
+      });
+
+      // Activate calligraphy glass board and clear prior strokes
+      useRobotStore.getState().setCalligraphyActive(true);
+      useRobotStore.getState().clearCalligraphy();
+
+      // Set initial home posture
+      useRobotStore.getState().setAllJointAngles(CALLIGRAPHY_HOME_JOINTS);
+
+      // Camera positioned directly in front of the glass board (Front-on orthogonal view)
+      if (!this.userCameraInteracted) {
+        useRobotStore.getState().setCameraSettings({ azimuthDeg: 90, elevationDeg: 1, distance: 980 });
+      }
+      if (!(await this.sleep(600, runId))) return;
+
+      // Ensure camera is directly facing the board
+      if (!this.userCameraInteracted) {
+        this.animateCameraTo({ azimuthDeg: 90, elevationDeg: 1, distance: 980 }, 1000, runId);
+      }
+      // Franka glides from home to ready start
+      await this.animateJointsTo(TEACHER_DAY_TRAJECTORY[0].joints, 1400, runId);
+      if (this.isCancelled(runId)) return;
+
+      // Step 2-5: Execute Calligraphy writing across the sections
+      let currentSection = '';
+      const totalPoints = TEACHER_DAY_TRAJECTORY.length;
+
+      for (let i = 0; i < totalPoints; i++) {
+        if (this.isCancelled(runId)) return;
+        const pt = TEACHER_DAY_TRAJECTORY[i];
+
+        // Section step transitions & front-on camera choreography
+        if (pt.section !== currentSection) {
+          currentSection = pt.section;
+          if (currentSection === 'Happy') {
+            updateStep(
+              1,
+              "Step 1/5: Writing 'Happy' (Fluid Cursive Calligraphy)",
+              "Bước 1/5: Nét vẽ 'Happy' (Thư pháp nét lượn mềm mại)"
+            );
+            this.animateCameraTo({ azimuthDeg: 90, elevationDeg: 1, distance: 950 }, 1500, runId);
+          } else if (currentSection === 'Vietnamese') {
+            updateStep(
+              2,
+              "Step 2/5: Writing 'Vietnamese' (7-DOF Redundant Kinematics)",
+              "Bước 2/5: Viết 'Vietnamese' (Động học dư dẫn 7 bậc tự do)"
+            );
+            this.animateCameraTo({ azimuthDeg: 90, elevationDeg: 1, distance: 960 }, 1500, runId);
+          } else if (currentSection === "Teachers' Day") {
+            updateStep(
+              3,
+              "Step 3/5: Writing 'Teachers\' Day' (Smooth Surface Contact)",
+              "Bước 3/5: Viết 'Teachers\' Day' (Quỹ đạo bám mặt kính)"
+            );
+            this.animateCameraTo({ azimuthDeg: 90, elevationDeg: 1, distance: 970 }, 1500, runId);
+          } else if (currentSection === '20-11') {
+            updateStep(
+              4,
+              "Step 4/5: Writing '20 - 11' (Celebrating Vietnamese Teachers' Day)",
+              "Bước 4/5: Nét chữ đỏ son '20 - 11' (Tri ân Ngày Nhà Giáo)"
+            );
+            this.animateCameraTo({ azimuthDeg: 90, elevationDeg: 1, distance: 980 }, 1500, runId);
+          } else if (currentSection === 'Flourish') {
+            updateStep(
+              5,
+              "Step 5/5: Sweeping Calligraphic Ribbon & Heart Loop",
+              "Bước 5/5: Nét lượn ribbon trái tim kết thúc mỹ cảm"
+            );
+            this.animateCameraTo({ azimuthDeg: 90, elevationDeg: 1, distance: 1000 }, 1500, runId);
+          }
+        }
+
+        // Apply joint positions and deposit calligraphy point
+        useRobotStore.getState().setAllJointAngles(pt.joints);
+        useRobotStore.getState().addCalligraphyPoint({
+          cartesian: pt.cartesian,
+          width: pt.width,
+          isPenDown: pt.isPenDown,
+        });
+
+        // Delay ~28ms per step for smooth 35 fps writing motion
+        if (!(await this.sleep(28, runId))) return;
+      }
+
+      // Final Step: Showcase Bow Pose & Grand Reveal
+      updateStep(
+        5,
+        "💐 HAPPY VIETNAMESE TEACHERS' DAY 20-11! (Honoring All Educators)",
+        '💐 KÍNH CHÚC MỪNG NGÀY NHÀ GIÁO VIỆT NAM 20-11! TRI ÂN THẦY CÔ!'
+      );
+
+      // Lift pen and perform bow
+      useRobotStore.getState().addCalligraphyPoint({
+        cartesian: [465, 0, 450],
+        width: 0,
+        isPenDown: false,
+      });
+
+      // Animate robot to graceful showcase bow posture
+      this.animateJointsTo(CALLIGRAPHY_SHOWCASE_JOINTS, 1800, runId);
+
+      // Grand sweeping camera reveal
+      await this.animateCameraTo({ azimuthDeg: 90, elevationDeg: 2, distance: 1100 }, 2000, runId);
+      if (this.isCancelled(runId)) return;
+
+      // Celebrate for 3 seconds so video captures the complete masterpiece
+      if (!(await this.sleep(3000, runId))) return;
     } finally {
       if (this.activeRunId === runId) {
         this.stopDemo();

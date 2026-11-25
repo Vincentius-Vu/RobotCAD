@@ -28,6 +28,7 @@ export const TrajectoryTimelineBar: React.FC = () => {
     waypoints,
     isRecording,
     recordingSeconds,
+    videoFormat,
     startVideoRecording,
     stopVideoRecording,
   } = useRobotStore();
@@ -125,7 +126,7 @@ export const TrajectoryTimelineBar: React.FC = () => {
 
           {/* Record 3D Simulation Video Button */}
           <button
-            onClick={() => (isRecording ? stopVideoRecording() : startVideoRecording())}
+            onClick={() => (isRecording ? stopVideoRecording() : startVideoRecording(videoFormat))}
             className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono font-medium transition ${
               isRecording
                 ? 'bg-rose-600/30 text-rose-300 border-rose-500 shadow-md shadow-rose-600/20'
@@ -133,8 +134,8 @@ export const TrajectoryTimelineBar: React.FC = () => {
             }`}
             title={
               isRecording
-                ? 'Click to Stop Video Recording and save .webm file'
-                : 'Record 3D Trajectory Simulation Video (60 FPS)'
+                ? `Click to Stop Video Recording and save .${videoFormat} file`
+                : `Record 3D Trajectory Simulation Video (60 FPS .${videoFormat.toUpperCase()})`
             }
           >
             <span
@@ -142,7 +143,7 @@ export const TrajectoryTimelineBar: React.FC = () => {
                 isRecording ? 'bg-rose-500 animate-ping' : 'bg-rose-500'
               }`}
             />
-            <span>{isRecording ? `REC ${formatRecordTime(recordingSeconds)}` : 'Rec Video'}</span>
+            <span>{isRecording ? `REC ${formatRecordTime(recordingSeconds)}` : `Rec Video (.${videoFormat})`}</span>
           </button>
         </div>
 

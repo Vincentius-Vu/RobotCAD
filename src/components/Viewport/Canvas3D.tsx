@@ -30,6 +30,7 @@ export const Canvas3D: React.FC = () => {
     recordingRequest,
     workspaceData,
     workspaceSettings,
+    calligraphyState,
   } = useRobotStore();
 
   // 1. Initialize SceneManager once on mount
@@ -259,7 +260,7 @@ export const Canvas3D: React.FC = () => {
   useEffect(() => {
     if (!sceneManagerRef.current || !recordingRequest) return;
     if (recordingRequest.action === 'start') {
-      sceneManagerRef.current.startVideoRecording(60);
+      sceneManagerRef.current.startVideoRecording(60, recordingRequest.format || 'mp4');
     } else if (recordingRequest.action === 'stop') {
       sceneManagerRef.current.stopVideoRecording();
     }
@@ -271,6 +272,23 @@ export const Canvas3D: React.FC = () => {
       sceneManagerRef.current.updateWorkspaceCloud(workspaceData, workspaceSettings);
     }
   }, [workspaceData, workspaceSettings]);
+
+  // 15. Calligraphy Glass Board & Ribbon Renderer (Vietnamese Teachers' Day 20-11)
+  useEffect(() => {
+    if (!sceneManagerRef.current) return;
+    sceneManagerRef.current.setCalligraphyActive(calligraphyState.isActive);
+  }, [calligraphyState.isActive]);
+
+  useEffect(() => {
+    if (!sceneManagerRef.current || calligraphyState.clearTrigger === 0) return;
+    sceneManagerRef.current.clearCalligraphy();
+  }, [calligraphyState.clearTrigger]);
+
+  useEffect(() => {
+    if (!sceneManagerRef.current || !calligraphyState.activePoint) return;
+    const { cartesian, width, isPenDown } = calligraphyState.activePoint;
+    sceneManagerRef.current.addCalligraphyPoint(cartesian, width, isPenDown);
+  }, [calligraphyState.activePoint]);
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-slate-950">

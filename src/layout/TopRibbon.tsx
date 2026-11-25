@@ -29,6 +29,9 @@ import {
   Monitor,
   Box,
   Play,
+  Sparkles,
+  ChevronDown,
+  Square,
 } from 'lucide-react';
 
 interface TopRibbonProps {
@@ -70,6 +73,8 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
     toggleSkeletonMode,
     isRecording,
     recordingSeconds,
+    videoFormat,
+    setVideoFormat,
     startVideoRecording,
     stopVideoRecording,
     demoState,
@@ -311,7 +316,7 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
           <span className={language === 'vi' ? 'text-amber-400 font-bold' : 'text-slate-400'}>VI</span>
         </button>
 
-        {/* Auto-Demo & Self-Recording Studio (Option A - Scenario 1) */}
+        {/* Unified Demo Scenarios Combo List */}
         <div className="relative">
           <button
             onClick={() => {
@@ -321,113 +326,261 @@ export const TopRibbon: React.FC<TopRibbonProps> = ({
                 setIsDemoMenuOpen(!isDemoMenuOpen);
               }
             }}
-            className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono font-semibold transition ${
+            className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition ${
               demoState.isRunning
-                ? 'bg-sky-500/20 text-sky-300 border-sky-400 shadow-md shadow-sky-500/20 animate-pulse'
+                ? demoState.scenarioId === 'teacher-day-20-11'
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-400 shadow-md shadow-amber-500/30 animate-pulse'
+                  : 'bg-sky-500/20 text-sky-300 border-sky-400 shadow-md shadow-sky-500/20 animate-pulse'
                 : 'bg-slate-800 text-sky-300 border-slate-700 hover:text-white hover:border-sky-500/50'
             }`}
             title={
               demoState.isRunning
                 ? isVi
-                  ? 'Đang chạy Auto Demo (Bấm để dừng)'
-                  : 'Running Auto Demo (Click to Stop)'
+                  ? 'Đang chạy kịch bản Demo (Bấm để Dừng)'
+                  : 'Demo in progress (Click to Stop)'
                 : isVi
-                ? 'Chạy kịch bản Demo tự động & Tự ghi hình video minh họa'
-                : 'Run Automated Feature Demo & Auto-Record Video'
+                ? 'Chọn kịch bản Demo tự động & Ghi hình video minh họa'
+                : 'Select automated feature demo & record video'
             }
           >
-            <Film className="w-3.5 h-3.5 text-sky-400" />
-            <span className="hidden sm:inline">
-              {demoState.isRunning ? (isVi ? 'Đang Demo' : 'Stop Demo') : 'Auto Demo'}
-            </span>
+            {demoState.isRunning ? (
+              <>
+                <Square className="w-3.5 h-3.5 fill-current text-rose-400" />
+                <span className="font-bold text-rose-300">
+                  {isVi ? 'Dừng Demo' : 'Stop Demo'}
+                </span>
+                <span className="hidden xl:inline text-[10px] text-slate-300 font-normal">
+                  ({demoState.scenarioId === 'teacher-day-20-11' ? '20-11' : 'PUMA 560'})
+                </span>
+              </>
+            ) : (
+              <>
+                <Film className="w-3.5 h-3.5 text-sky-400" />
+                <span className="font-bold">
+                  {isVi ? 'Kịch bản Demo' : 'Auto Demo'}
+                </span>
+                <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
+              </>
+            )}
           </button>
 
           {isDemoMenuOpen && !demoState.isRunning && (
             <div
-              className="absolute right-0 mt-2 w-72 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 z-50 space-y-1.5"
+              className="absolute right-0 mt-2 w-96 bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl shadow-2xl p-3 z-50 space-y-2.5"
               onMouseLeave={() => setIsDemoMenuOpen(false)}
             >
-              <div className="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-slate-400 border-b border-slate-800">
-                {isVi
-                  ? 'Kịch bản 1: PUMA 560 (IK, Kỳ dị & Quỹ đạo RNE)'
-                  : 'Scenario 1: PUMA 560 (IK, Singularity & RNE)'}
+              {/* Header & Video Format Selector */}
+              <div className="flex items-center justify-between px-2.5 py-1.5 bg-slate-950/80 rounded-xl border border-slate-800 text-[11px] font-mono">
+                <span className="text-slate-400 font-sans">
+                  {isVi ? 'Định dạng xuất video:' : 'Video Export Format:'}
+                </span>
+                <div className="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-700">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setVideoFormat('mp4');
+                    }}
+                    className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold transition ${
+                      videoFormat === 'mp4'
+                        ? 'bg-amber-500 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                    title={isVi ? 'MP4 (Chuẩn phổ biến, tương thích mọi thiết bị)' : 'MP4 (Universal standard)'}
+                  >
+                    .MP4
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setVideoFormat('webm');
+                    }}
+                    className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold transition ${
+                      videoFormat === 'webm'
+                        ? 'bg-amber-500 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                    title={isVi ? 'WebM (Dung lượng nhẹ, chuẩn web)' : 'WebM (Lightweight web format)'}
+                  >
+                    .WebM
+                  </button>
+                </div>
               </div>
 
-              <button
-                onClick={() => {
-                  setIsDemoMenuOpen(false);
-                  DemoDirector.runScenario1('tab');
-                }}
-                className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-sky-600/20 border border-transparent hover:border-sky-500/40 transition flex items-start space-x-2.5"
-              >
-                <Monitor className="w-4 h-4 text-sky-400 mt-0.5 shrink-0" />
-                <div>
-                  <div className="text-xs font-semibold text-slate-100">
-                    {isVi ? 'Quay Toàn Màn Hình App (Full UI)' : 'Record Full App UI (.webm)'}
+              {/* Scenario 1: Franka Emika Panda Calligraphy 20-11 */}
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500/10 via-rose-500/5 to-slate-950 border border-amber-500/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                    <div>
+                      <div className="text-xs font-bold text-amber-300">
+                        {isVi ? '💐 Kịch bản 1: Thư Pháp 20-11 (Franka Emika)' : '💐 Scenario 1: 20-11 Calligraphy (Franka Emika)'}
+                      </div>
+                      <div className="text-[10px] text-slate-400 leading-tight">
+                        {isVi
+                          ? 'Viết chữ son trên bảng kính TDTU • Camera tự do 360°'
+                          : 'Writes golden script on TDTU glass • 360° Free Camera'}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-[10px] text-slate-400 leading-tight mt-0.5">
-                    {isVi
-                      ? 'Ghi lại cả Sidebar, Cảnh báo Kỳ dị, Đồ thị & 3D (Chọn "Tab này" 1 lần)'
-                      : 'Captures sidebars, alerts, plots & 3D (Select current tab once)'}
-                  </div>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    {isVi ? 'Nổi bật' : 'Special'}
+                  </span>
                 </div>
-              </button>
 
-              <button
-                onClick={() => {
-                  setIsDemoMenuOpen(false);
-                  DemoDirector.runScenario1('canvas');
-                }}
-                className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-emerald-600/20 border border-transparent hover:border-emerald-500/40 transition flex items-start space-x-2.5"
-              >
-                <Box className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
-                <div>
-                  <div className="text-xs font-semibold text-slate-100">
-                    {isVi ? 'Quay Thuần Cảnh 3D (Không Popup)' : 'Record 3D Canvas Only (No Prompt)'}
-                  </div>
-                  <div className="text-[10px] text-slate-400 leading-tight mt-0.5">
-                    {isVi
-                      ? 'Tự bật REC 60 FPS không cần cấp quyền, tự tải file .webm khi xong'
-                      : 'Instant 60 FPS WebGL capture, auto-downloads .webm on finish'}
-                  </div>
+                <div className="grid grid-cols-1 gap-1 pt-0.5">
+                  <button
+                    onClick={() => {
+                      setIsDemoMenuOpen(false);
+                      DemoDirector.runTeacherDay20_11('canvas', videoFormat);
+                    }}
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 hover:border-amber-400 transition flex items-center space-x-2 text-amber-200"
+                  >
+                    <Box className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <div className="text-xs font-medium">
+                      {isVi
+                        ? `Quay Thuần Cảnh 3D 60 FPS (Xuất .${videoFormat.toUpperCase()})`
+                        : `Record 3D Canvas (60 FPS .${videoFormat.toUpperCase()})`}
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsDemoMenuOpen(false);
+                      DemoDirector.runTeacherDay20_11('tab', videoFormat);
+                    }}
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-800 border border-transparent hover:border-slate-700 transition flex items-center space-x-2 text-slate-300"
+                  >
+                    <Monitor className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                    <div className="text-xs">
+                      {isVi
+                        ? `Ghi Toàn Bộ Màn Hình (Full UI .${videoFormat.toUpperCase()})`
+                        : `Record Full App Screen (.${videoFormat.toUpperCase()})`}
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsDemoMenuOpen(false);
+                      DemoDirector.runTeacherDay20_11('none');
+                    }}
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-800 border border-transparent hover:border-slate-700 transition flex items-center space-x-2 text-slate-400 hover:text-slate-200"
+                  >
+                    <Play className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <div className="text-xs">
+                      {isVi ? 'Chỉ xem Robot viết chữ (Không quay)' : 'Preview Writing Only (No Recording)'}
+                    </div>
+                  </button>
                 </div>
-              </button>
+              </div>
 
-              <button
-                onClick={() => {
-                  setIsDemoMenuOpen(false);
-                  DemoDirector.runScenario1('none');
-                }}
-                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-800 transition flex items-center space-x-2.5 text-slate-300"
-              >
-                <Play className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span className="text-xs">
-                  {isVi ? 'Chỉ chạy Demo thử nghiệm (Không quay)' : 'Preview Demo Only (No Recording)'}
-                </span>
-              </button>
+              {/* Scenario 2: PUMA 560 Kinematics & Dynamics */}
+              <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Bot className="w-4 h-4 text-sky-400 shrink-0" />
+                    <div>
+                      <div className="text-xs font-bold text-sky-300">
+                        {isVi ? '🤖 Kịch bản 2: RoboCAD & PUMA 560' : '🤖 Scenario 2: RoboCAD & PUMA 560'}
+                      </div>
+                      <div className="text-[10px] text-slate-400 leading-tight">
+                        {isVi
+                          ? 'Khởi tạo D-H, Nghịch học 8 nghiệm, Kỳ dị & RNE'
+                          : 'D-H Params, 8-branch IK, Singularity & RNE Dynamics'}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                    {isVi ? 'Giáo trình' : 'Tutorial'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-1 pt-0.5">
+                  <button
+                    onClick={() => {
+                      setIsDemoMenuOpen(false);
+                      DemoDirector.runScenario1('canvas', videoFormat);
+                    }}
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 hover:border-sky-400 transition flex items-center space-x-2 text-sky-200"
+                  >
+                    <Box className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                    <div className="text-xs font-medium">
+                      {isVi
+                        ? `Quay Thuần Cảnh 3D 60 FPS (Xuất .${videoFormat.toUpperCase()})`
+                        : `Record 3D Canvas (60 FPS .${videoFormat.toUpperCase()})`}
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsDemoMenuOpen(false);
+                      DemoDirector.runScenario1('tab', videoFormat);
+                    }}
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-800 border border-transparent hover:border-slate-700 transition flex items-center space-x-2 text-slate-300"
+                  >
+                    <Monitor className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                    <div className="text-xs">
+                      {isVi
+                        ? `Ghi Toàn Bộ Màn Hình (Full UI .${videoFormat.toUpperCase()})`
+                        : `Record Full App Screen (.${videoFormat.toUpperCase()})`}
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsDemoMenuOpen(false);
+                      DemoDirector.runScenario1('none');
+                    }}
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-800 border border-transparent hover:border-slate-700 transition flex items-center space-x-2 text-slate-400 hover:text-slate-200"
+                  >
+                    <Play className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <div className="text-xs">
+                      {isVi ? 'Chỉ xem Demo thử nghiệm (Không quay)' : 'Preview Demo Only (No Recording)'}
+                    </div>
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Video Recording */}
-        <button
-          onClick={() => (isRecording ? stopVideoRecording() : startVideoRecording())}
-          className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono font-medium transition ${
-            isRecording
-              ? 'bg-rose-600/30 text-rose-300 border-rose-500 shadow-md shadow-rose-600/20'
-              : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white hover:bg-slate-750'
-          }`}
-          title={isRecording ? t.topRibbon.stopRecord : t.topRibbon.recordVideo}
-        >
-          <span
-            className={`w-2 h-2 rounded-full ${
-              isRecording ? 'bg-rose-500 animate-ping' : 'bg-rose-500'
+        {/* Video Recording: REC Button with MP4/WebM Format Selector */}
+        <div className="flex items-center rounded-lg border border-slate-700 bg-slate-800 text-xs font-mono">
+          <button
+            onClick={() => (isRecording ? stopVideoRecording() : startVideoRecording(videoFormat))}
+            className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-l-lg transition ${
+              isRecording
+                ? 'bg-rose-600/30 text-rose-300 font-bold shadow-md shadow-rose-600/20'
+                : 'text-slate-300 hover:text-white hover:bg-slate-750'
             }`}
-          />
-          <span className="hidden sm:inline">
-            {isRecording ? formatRec(recordingSeconds) : t.topRibbon.rec}
-          </span>
-        </button>
+            title={
+              isRecording
+                ? t.topRibbon.stopRecord
+                : `${t.topRibbon.recordVideo} (${videoFormat.toUpperCase()})`
+            }
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isRecording ? 'bg-rose-500 animate-ping' : 'bg-rose-500'
+              }`}
+            />
+            <span className="hidden sm:inline">
+              {isRecording ? formatRec(recordingSeconds) : t.topRibbon.rec}
+            </span>
+          </button>
+          {!isRecording && (
+            <button
+              onClick={() => setVideoFormat(videoFormat === 'mp4' ? 'webm' : 'mp4')}
+              className="px-2 py-1.5 border-l border-slate-700 hover:bg-slate-700 text-[10px] text-amber-400 font-bold transition rounded-r-lg"
+              title={
+                isVi
+                  ? `Định dạng video: ${videoFormat.toUpperCase()} (Bấm để chuyển sang ${videoFormat === 'mp4' ? 'WebM' : 'MP4'})`
+                  : `Video format: ${videoFormat.toUpperCase()} (Click to toggle ${videoFormat === 'mp4' ? 'WebM' : 'MP4'})`
+              }
+            >
+              .{videoFormat}
+            </button>
+          )}
+        </div>
 
         {/* Snapshot PNG (DPI) */}
         <button

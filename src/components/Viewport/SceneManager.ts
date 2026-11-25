@@ -15,6 +15,8 @@ import { robotLoader, DEFAULT_LINK_PALETTE } from '../../services/robotLoader';
 import { RobotKinematics } from '../../kinematics/RobotKinematics';
 import { useRobotStore } from '../../store/robotStore';
 import { MobileRobotVisuals } from './MobileRobotVisuals';
+import { CalligraphyGlassBoard } from './CalligraphyGlassBoard';
+import { DemoDirector } from '../../services/demoDirector';
 
 export class SceneManager {
   private container: HTMLElement;
@@ -52,6 +54,10 @@ export class SceneManager {
   // Video recording
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
+
+  // Calligraphy Glass Board & Dynamic Ribbon (Vietnamese Teachers' Day 20-11)
+  public calligraphyBoard: CalligraphyGlassBoard | null = null;
+  private isCalligraphyActive = false;
 
   // Workspace Cloud & Slicing
   private workspacePointsMesh: THREE.Points | null = null;
@@ -125,6 +131,17 @@ export class SceneManager {
     this.controls.minDistance = 5;
     this.controls.maxDistance = 60000;
     this.controls.target.set(0, 450, 0);
+
+    // Notify DemoDirector when user manually orbits, pans, or zooms camera so demo won't lock/hijack view
+    this.controls.addEventListener('start', () => {
+      DemoDirector.notifyUserCameraInteraction();
+    });
+    this.renderer.domElement.addEventListener('pointerdown', () => {
+      DemoDirector.notifyUserCameraInteraction();
+    }, { passive: true });
+    this.renderer.domElement.addEventListener('wheel', () => {
+      DemoDirector.notifyUserCameraInteraction();
+    }, { passive: true });
 
     (window as any).__sceneManager = this;
 
@@ -396,11 +413,21 @@ export class SceneManager {
    * Directly sets camera spherical orbit position (distance, elevation angle, azimuth angle)
    */
   public setCameraSpherical(distance: number, elevationDeg: number, azimuthDeg: number, fov?: number) {
+    // When a demo is running and user has manually orbited/zoomed, do not overwrite user's camera
+    if (useRobotStore.getState().demoState.isRunning && DemoDirector.hasUserInteractedWithCamera()) {
+      return;
+    }
+
     if (fov !== undefined && this.camera.fov !== fov) {
       this.camera.fov = fov;
       this.camera.updateProjectionMatrix();
     }
-    const target = this.controls.target || new THREE.Vector3(0, 450, 0);
+    const target = this.isCalligraphyActive
+      ? new THREE.Vector3(500, 450, 0)
+      : this.controls.target || new THREE.Vector3(0, 450, 0);
+    if (this.isCalligraphyActive) {
+      this.controls.target.copy(target);
+    }
     const clampedElev = Math.max(-10, Math.min(85, elevationDeg));
     const phi = THREE.MathUtils.degToRad(90 - clampedElev);
     const theta = THREE.MathUtils.degToRad(azimuthDeg);
@@ -478,9 +505,9 @@ export class SceneManager {
   }
 
   /**
-   * Starts high-fps video recording of the 3D canvas
+   * Starts high-fps video recording of the 3D canvas (MP4 or WebM)
    */
-  public startVideoRecording(fps = 60): boolean {
+  public startVideoRecording(fps = 60, format: 'mp4' | 'webm' = 'mp4'): boolean {
     if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
       return false;
     }
@@ -489,17 +516,33 @@ export class SceneManager {
       const canvas = this.renderer.domElement;
       const stream = canvas.captureStream(fps);
 
-      let mimeType = 'video/webm;codecs=vp9';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'video/webm';
-      }
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = '';
+      let mimeType = '';
+      let extension = 'mp4';
+
+      if (format === 'mp4') {
+        if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1')) {
+          mimeType = 'video/mp4;codecs=avc1';
+        } else if (MediaRecorder.isTypeSupported('video/mp4;codecs=h264')) {
+          mimeType = 'video/mp4;codecs=h264';
+        } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+          mimeType = 'video/mp4';
+        } else {
+          // Fallback to webm if mp4 unsupported
+          mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+            ? 'video/webm;codecs=vp9'
+            : 'video/webm';
+          extension = 'webm';
+        }
+      } else {
+        mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+          ? 'video/webm;codecs=vp9'
+          : 'video/webm';
+        extension = 'webm';
       }
 
       this.recordedChunks = [];
       this.mediaRecorder = mimeType
-        ? new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 10000000 })
+        ? new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 12000000 })
         : new MediaRecorder(stream);
 
       this.mediaRecorder.ondataavailable = (event) => {
@@ -511,12 +554,12 @@ export class SceneManager {
       this.mediaRecorder.onstop = () => {
         if (this.recordedChunks.length === 0) return;
         const blob = new Blob(this.recordedChunks, {
-          type: this.mediaRecorder?.mimeType || 'video/webm',
+          type: this.mediaRecorder?.mimeType || (extension === 'mp4' ? 'video/mp4' : 'video/webm'),
         });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         const robotName = this.currentModel?.modelName || 'Robot';
-        link.download = `${robotName.replace(/\s+/g, '_')}_Trajectory_Simulation_${Date.now()}.webm`;
+        link.download = `${robotName.replace(/\s+/g, '_')}_Simulation_${Date.now()}.${extension}`;
         link.href = url;
         link.click();
         setTimeout(() => URL.revokeObjectURL(url), 2000);
@@ -629,12 +672,26 @@ export class SceneManager {
 
     // 10. Center camera on robot
     this.fitCameraToRobot();
+
+    // 11. Re-attach calligraphy board if active
+    if (this.isCalligraphyActive && this.calligraphyBoard) {
+      if (!this.robotRoot.children.includes(this.calligraphyBoard.group)) {
+        this.robotRoot.add(this.calligraphyBoard.group);
+      }
+      this.calligraphyBoard.group.visible = true;
+    }
   }
 
   private clearRobotHierarchy() {
-    // 1. Thoroughly remove and dispose EVERY child in robotRoot
-    while (this.robotRoot.children.length > 0) {
-      const child = this.robotRoot.children[0];
+    // 1. Thoroughly remove and dispose children in robotRoot (preserving calligraphy board)
+    const toRemove: THREE.Object3D[] = [];
+    for (const child of this.robotRoot.children) {
+      if (this.calligraphyBoard && child === this.calligraphyBoard.group) {
+        continue;
+      }
+      toRemove.push(child);
+    }
+    for (const child of toRemove) {
       this.robotRoot.remove(child);
       this.disposeObject(child);
     }
@@ -1062,6 +1119,11 @@ export class SceneManager {
       const tcpPos = new THREE.Vector3();
       tcpTransform.decompose(tcpPos, new THREE.Quaternion(), new THREE.Vector3());
       this.appendTrajectoryPoint(tcpPos);
+
+      // 6. Update Calligraphy Pen Stylus Pose
+      if (this.calligraphyBoard && this.isCalligraphyActive) {
+        this.calligraphyBoard.updatePenPose(tcpTransform);
+      }
     }
   }
 
@@ -1096,6 +1158,56 @@ export class SceneManager {
     if (this.trajectoryLine) {
       this.trajectoryLine.geometry.setDrawRange(0, 0);
       this.trajectoryLine.geometry.attributes.position.needsUpdate = true;
+    }
+  }
+
+  /**
+   * Toggles 3D Calligraphy Glass Board and Pen Stylus
+   */
+  public setCalligraphyActive(active: boolean): void {
+    this.isCalligraphyActive = active;
+    if (active) {
+      if (!this.calligraphyBoard) {
+        this.calligraphyBoard = new CalligraphyGlassBoard();
+        this.robotRoot.add(this.calligraphyBoard.group);
+      } else if (!this.robotRoot.children.includes(this.calligraphyBoard.group)) {
+        this.robotRoot.add(this.calligraphyBoard.group);
+      }
+      this.calligraphyBoard.group.visible = true;
+      if (this.currentTransforms && this.currentTransforms.length > 0) {
+        const tcpTransform = this.currentTransforms[this.currentTransforms.length - 1];
+        if (tcpTransform) {
+          this.calligraphyBoard.updatePenPose(tcpTransform);
+        }
+      }
+    } else {
+      if (this.calligraphyBoard) {
+        this.calligraphyBoard.group.visible = false;
+      }
+    }
+    // Dynamically update robot finishes (pristine ceramic white during calligraphy, restoring colors when exiting)
+    this.setRenderingStyle(this.renderingStyle);
+  }
+
+  /**
+   * Clears all drawn calligraphy strokes
+   */
+  public clearCalligraphy(): void {
+    if (this.calligraphyBoard) {
+      this.calligraphyBoard.clear();
+    }
+  }
+
+  /**
+   * Adds a calligraphy stroke point
+   */
+  public addCalligraphyPoint(
+    cartesian: [number, number, number],
+    width: number,
+    isPenDown: boolean
+  ): void {
+    if (this.calligraphyBoard && this.isCalligraphyActive) {
+      this.calligraphyBoard.addPoint(cartesian, width, isPenDown);
     }
   }
 
@@ -1333,6 +1445,7 @@ export class SceneManager {
 
     this.linkMeshes.forEach((mesh, index) => {
       const linkColor = this.currentModel!.links[index]?.color || '#3b82f6';
+
       if (!isGhostMode) {
         // High-contrast polyurethane industrial finish with rich saturation
         mesh.material = new THREE.MeshStandardMaterial({
@@ -1541,6 +1654,7 @@ export class SceneManager {
     if (this.transformControls) {
       this.transformControls.dispose();
     }
+    this.calligraphyBoard?.dispose();
     this.clearRobotHierarchy();
     this.renderer.dispose();
     if (this.renderer.domElement && this.renderer.domElement.parentElement) {

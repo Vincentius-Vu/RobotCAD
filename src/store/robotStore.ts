@@ -111,7 +111,8 @@ interface RobotStoreState {
   // Video Recording State
   isRecording: boolean;
   recordingSeconds: number;
-  recordingRequest: { action: 'start' | 'stop'; timestamp: number } | null;
+  videoFormat: 'mp4' | 'webm';
+  recordingRequest: { action: 'start' | 'stop'; format?: 'mp4' | 'webm'; timestamp: number } | null;
 
   // Auto-Demo Director State
   demoState: {
@@ -124,6 +125,16 @@ interface RobotStoreState {
     recordMode: 'none' | 'canvas' | 'tab';
   };
   setDemoState: (partial: Partial<RobotStoreState['demoState']>) => void;
+
+  // Calligraphy State (Vietnamese Teachers' Day 20-11)
+  calligraphyState: {
+    isActive: boolean;
+    activePoint: { cartesian: [number, number, number]; width: number; isPenDown: boolean } | null;
+    clearTrigger: number;
+  };
+  setCalligraphyActive: (isActive: boolean) => void;
+  addCalligraphyPoint: (point: { cartesian: [number, number, number]; width: number; isPenDown: boolean }) => void;
+  clearCalligraphy: () => void;
 
   // Workspace Analysis State
   workspaceData: WorkspaceCloudData | null;
@@ -177,8 +188,9 @@ interface RobotStoreState {
     customFileName?: string;
     scope?: 'workspace' | 'fullscreen';
   } | 'white' | 'transparent' | 'current') => void;
-  startVideoRecording: () => void;
+  startVideoRecording: (format?: 'mp4' | 'webm') => void;
   stopVideoRecording: () => void;
+  setVideoFormat: (format: 'mp4' | 'webm') => void;
   setTcpPose: (pose: CartesianPose) => void;
   clearTrace: () => void;
 
@@ -692,6 +704,7 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
 
   isRecording: false,
   recordingSeconds: 0,
+  videoFormat: 'mp4',
   recordingRequest: null,
 
   demoState: {
@@ -706,6 +719,28 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
   setDemoState: (partial) =>
     set((state) => ({
       demoState: { ...state.demoState, ...partial },
+    })),
+
+  calligraphyState: {
+    isActive: false,
+    activePoint: null,
+    clearTrigger: 0,
+  },
+  setCalligraphyActive: (isActive: boolean) =>
+    set((state) => ({
+      calligraphyState: { ...state.calligraphyState, isActive },
+    })),
+  addCalligraphyPoint: (point) =>
+    set((state) => ({
+      calligraphyState: { ...state.calligraphyState, activePoint: point },
+    })),
+  clearCalligraphy: () =>
+    set((state) => ({
+      calligraphyState: {
+        ...state.calligraphyState,
+        activePoint: null,
+        clearTrigger: state.calligraphyState.clearTrigger + 1,
+      },
     })),
 
   // Workspace Initial State
@@ -946,7 +981,12 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
     }
   },
 
-  startVideoRecording: () => {
+  setVideoFormat: (format: 'mp4' | 'webm') => {
+    set({ videoFormat: format });
+  },
+
+  startVideoRecording: (format?: 'mp4' | 'webm') => {
+    const selectedFormat = format || get().videoFormat || 'mp4';
     if (recordingIntervalId) {
       clearInterval(recordingIntervalId);
       recordingIntervalId = null;
@@ -954,7 +994,8 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
     set({
       isRecording: true,
       recordingSeconds: 0,
-      recordingRequest: { action: 'start', timestamp: Date.now() },
+      videoFormat: selectedFormat,
+      recordingRequest: { action: 'start', format: selectedFormat, timestamp: Date.now() },
     });
     recordingIntervalId = setInterval(() => {
       if (!get().isRecording) {

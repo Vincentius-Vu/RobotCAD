@@ -2,7 +2,7 @@ import React from 'react';
 import { useRobotStore } from '../../store/robotStore';
 import { useTranslation } from '../../i18n';
 import { DemoDirector } from '../../services/demoDirector';
-import { Film, Square } from 'lucide-react';
+import { Film, Square, RotateCcw } from 'lucide-react';
 
 export const DemoDirectorHUD: React.FC = () => {
   const { demoState, isRecording, recordingSeconds } = useRobotStore();
@@ -35,6 +35,17 @@ export const DemoDirectorHUD: React.FC = () => {
                 <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
                 REC {fmtSec(recordingSeconds)} ({demoState.recordMode === 'tab' ? 'Full UI' : '3D Canvas'})
               </span>
+            )}
+
+            {DemoDirector.hasUserInteractedWithCamera() && (
+              <button
+                onClick={() => DemoDirector.resetCameraView()}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-300 text-[10px] font-mono font-medium transition cursor-pointer"
+                title={isVi ? 'Khôi phục góc nhìn camera tự động ban đầu' : 'Reset to default director camera view'}
+              >
+                <RotateCcw className="w-2.5 h-2.5" />
+                <span>{isVi ? 'Góc nhìn tự do (Đặt lại)' : 'Free Cam (Reset)'}</span>
+              </button>
             )}
           </div>
 
